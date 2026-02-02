@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, type FormEvent, type ChangeEvent } from 'react';
-import { ArrowRight, PlusCircle, X, Loader2, Mic, Square } from 'lucide-react';
+import { useState, useRef, useEffect, type FormEvent, type ChangeEvent, type DragEvent, type ClipboardEvent } from 'react';
+import { ArrowRight, PlusCircle, X, Loader2, Mic, Square, Upload } from 'lucide-react';
 import { EmojiPicker } from './EmojiPicker';
 import { GifPicker } from './GifPicker';
 import { cn } from '@/lib/utils';
@@ -20,10 +20,12 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -150,6 +152,96 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
     setGifUrl(null);
   };
 
+  // Process image file (shared by file input, paste, and drag-drop)
+  const processImageFile = (file: File) => {
+    if (file && file.type.startsWith('image/')) {
+      setImageFile(file);
+      setGifUrl(null);
+      setAudioBlob(null);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle clipboard paste
+  const handlePaste = (e: ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          processImageFile(file);
+        }
+        break;
+      }
+    }
+  };
+
+  // Handle drag events
+  const handleDragEnter = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set dragging to false if we're leaving the drop zone entirely
+    if (e.currentTarget === e.target) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        processImageFile(file);
+      }
+    }
+  };
+
+  // Global paste listener
+  useEffect(() => {
+    const handleGlobalPaste = (e: globalThis.ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            processImageFile(file);
+          }
+          break;
+        }
+      }
+    };
+
+    document.addEventListener('paste', handleGlobalPaste);
+    return () => {
+      document.removeEventListener('paste', handleGlobalPaste);
+    };
+  }, []);
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -203,7 +295,24 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
   };
 
   return (
-    <div className="p-4 md:p-6 pt-2 shrink-0">
+    <div
+      ref={dropZoneRef}
+      className="p-4 md:p-6 pt-2 shrink-0 relative"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-[#6E56CF]/20 border-2 border-dashed border-[#6E56CF] rounded-xl flex items-center justify-center z-10 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-2 text-[#6E56CF]">
+            <Upload className="w-8 h-8" />
+            <span className="text-[14px] font-medium">Drop image here</span>
+          </div>
+        </div>
+      )}
+
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
