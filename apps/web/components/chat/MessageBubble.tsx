@@ -1,10 +1,32 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Smile, Play, Pause } from 'lucide-react';
+import { Smile, Play, Pause, Youtube } from 'lucide-react';
 import { cn, formatTime, generateAvatarUrl } from '@/lib/utils';
 import { useRoomStore } from '@/stores/room';
 import type { Message, Reaction } from '@rithy-room/shared';
+
+// Check if message is a bot command
+function parseBotCommand(text: string): { isBot: boolean; youtubeUrl?: string; videoId?: string } {
+  const botPattern = /^@bot\s+(.+)/i;
+  const match = text.match(botPattern);
+
+  if (!match) return { isBot: false };
+
+  const url = match[1].trim();
+  const youtubePattern = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/;
+  const videoMatch = url.match(youtubePattern);
+
+  if (videoMatch) {
+    return { isBot: true, youtubeUrl: url, videoId: videoMatch[1] };
+  }
+
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) {
+    return { isBot: true, youtubeUrl: url, videoId: url };
+  }
+
+  return { isBot: true };
+}
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '👀', '🔥'];
 
@@ -183,7 +205,21 @@ export function MessageBubble({
                 </div>
               </div>
             )}
-            {message.text && !message.text.startsWith('🎤') && <div>{message.text}</div>}
+            {message.text && !message.text.startsWith('🎤') && (() => {
+              const botCmd = parseBotCommand(message.text);
+              if (botCmd.isBot && botCmd.videoId) {
+                return (
+                  <div className="flex items-center gap-2">
+                    <Youtube className="w-5 h-5 text-[#FF0000] shrink-0" />
+                    <div>
+                      <div className="text-[12px] opacity-70">Now Playing</div>
+                      <div className="text-[13px]">YouTube Video</div>
+                    </div>
+                  </div>
+                );
+              }
+              return <div>{message.text}</div>;
+            })()}
           </div>
 
           {/* Reaction picker trigger */}
