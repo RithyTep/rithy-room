@@ -2,25 +2,29 @@
 
 import { useEffect, useRef } from 'react';
 import { Mic, MicOff, Monitor } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, generateAvatarUrl } from '@/lib/utils';
 
 interface VideoTileProps {
   stream: MediaStream | null;
   name: string;
+  avatarUrl?: string | null;
   isMuted?: boolean;
   isActiveSpeaker?: boolean;
   isSelf?: boolean;
   isScreenShare?: boolean;
+  isCameraOff?: boolean;
   volume?: number;
 }
 
 export function VideoTile({
   stream,
   name,
+  avatarUrl,
   isMuted,
   isActiveSpeaker,
   isSelf,
   isScreenShare,
+  isCameraOff,
   volume = 100,
 }: VideoTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -35,16 +39,17 @@ export function VideoTile({
     }
   }, [stream, volume, isSelf]);
 
-  const hasVideo = stream?.getVideoTracks().some((t) => t.enabled);
+  const hasVideo = stream?.getVideoTracks().some((t) => t.enabled) && !isCameraOff;
+  const displayAvatar = avatarUrl || generateAvatarUrl(name);
 
   return (
     <div
       className={cn(
-        'aspect-video bg-[#1C1C1E] rounded-lg overflow-hidden relative',
+        'aspect-video bg-[#1C1C1E] rounded-xl overflow-hidden relative',
         isActiveSpeaker
-          ? 'ring-1 ring-[#6E56CF] shadow-[0_0_0_1px_rgba(110,86,207,0.1)]'
+          ? 'ring-2 ring-[#6E56CF] shadow-[0_0_0_1px_rgba(110,86,207,0.2)]'
           : isScreenShare
-            ? 'ring-1 ring-[#4ADE80]'
+            ? 'ring-2 ring-[#4ADE80]'
             : 'border border-[#242426]'
       )}
     >
@@ -55,52 +60,56 @@ export function VideoTile({
             autoPlay
             playsInline
             muted={isSelf}
-            className="w-full h-full object-cover opacity-90"
+            className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-50" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         </>
       ) : (
-        <div className="w-full h-full flex items-center justify-center">
-          <div className="w-12 h-12 rounded-full bg-[#6E56CF] flex items-center justify-center text-white text-lg font-medium">
-            {isScreenShare ? (
-              <Monitor className="w-6 h-6" />
-            ) : (
-              name.charAt(0).toUpperCase()
-            )}
-          </div>
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1C1C1E] to-[#121212]">
+          {isScreenShare ? (
+            <div className="w-16 h-16 rounded-full bg-[#4ADE80]/20 flex items-center justify-center">
+              <Monitor className="w-8 h-8 text-[#4ADE80]" />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <img
+                src={displayAvatar}
+                alt={name}
+                className="w-16 h-16 rounded-full bg-[#2A2A2A] object-cover ring-2 ring-[#242426]"
+              />
+              <span className="text-[12px] text-[#888] font-medium">Camera off</span>
+            </div>
+          )}
         </div>
       )}
 
       {/* Name and mic status */}
-      <div className="absolute bottom-2 left-2 flex items-center gap-2">
-        {!isScreenShare && (
-          <div
-            className={cn(
-              'w-5 h-5 rounded-full flex items-center justify-center',
-              isMuted ? 'bg-[#EF4444]' : 'bg-white/10 backdrop-blur-md'
-            )}
-          >
-            {isMuted ? (
-              <MicOff className="w-3 h-3 text-white" />
-            ) : (
-              <Mic className="w-3 h-3 text-white" />
-            )}
-          </div>
-        )}
-        {isScreenShare && (
-          <div className="w-5 h-5 rounded-full flex items-center justify-center bg-[#4ADE80]">
-            <Monitor className="w-3 h-3 text-white" />
-          </div>
-        )}
-        <span
-          className={cn(
-            'text-[12px] font-medium drop-shadow-md',
-            hasVideo ? 'text-white' : 'text-[#888]'
+      <div className="absolute bottom-2 left-2 right-2 flex items-center gap-2">
+        <div className="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-full px-2 py-1">
+          {!isScreenShare && (
+            <div
+              className={cn(
+                'w-5 h-5 rounded-full flex items-center justify-center',
+                isMuted ? 'bg-[#EF4444]' : 'bg-white/20'
+              )}
+            >
+              {isMuted ? (
+                <MicOff className="w-3 h-3 text-white" />
+              ) : (
+                <Mic className="w-3 h-3 text-white" />
+              )}
+            </div>
           )}
-        >
-          {name}
-          {isSelf && !isScreenShare && ' (You)'}
-        </span>
+          {isScreenShare && (
+            <div className="w-5 h-5 rounded-full flex items-center justify-center bg-[#4ADE80]">
+              <Monitor className="w-3 h-3 text-white" />
+            </div>
+          )}
+          <span className="text-[11px] font-medium text-white">
+            {name}
+            {isSelf && !isScreenShare && ' (You)'}
+          </span>
+        </div>
       </div>
     </div>
   );

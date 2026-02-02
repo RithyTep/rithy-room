@@ -107,7 +107,9 @@ export function VideoGrid() {
           <VideoTile
             stream={localStream}
             name={currentMember.name}
+            avatarUrl={currentMember.avatarUrl}
             isMuted={isMuted}
+            isCameraOff={isCameraOff}
             isActiveSpeaker
             isSelf
           />
@@ -122,6 +124,7 @@ export function VideoGrid() {
               key={memberId}
               stream={stream}
               name={member.name}
+              avatarUrl={member.avatarUrl}
               volume={volume}
             />
           );
