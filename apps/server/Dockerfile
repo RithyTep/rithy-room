@@ -23,9 +23,10 @@ RUN npm run build --workspace=@rithy-room/server
 WORKDIR /app/apps/server
 RUN npx prisma generate
 RUN mkdir -p uploads
+RUN chmod +x start.sh
 
 ENV PORT=3001
 EXPOSE 3001
 
-# Start from the server directory
-CMD ["node", "dist/index.js"]
+# Start with migration script
+CMD ["sh", "start.sh"]
