@@ -3,6 +3,7 @@
 import { useState, useRef, type FormEvent, type ChangeEvent } from 'react';
 import { ArrowRight, PlusCircle, X, Loader2, Mic, Square } from 'lucide-react';
 import { EmojiPicker } from './EmojiPicker';
+import { GifPicker } from './GifPicker';
 import { cn } from '@/lib/utils';
 
 interface MessageInputProps {
@@ -14,6 +15,7 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
   const [text, setText] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [gifUrl, setGifUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -25,12 +27,17 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if ((!text.trim() && !imageFile && !audioBlob) || disabled || isUploading) return;
+    if ((!text.trim() && !imageFile && !audioBlob && !gifUrl) || disabled || isUploading) return;
 
     let imageUrl: string | undefined;
     let audioUrl: string | undefined;
 
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001';
+
+    // Use GIF URL directly (no upload needed)
+    if (gifUrl) {
+      imageUrl = gifUrl;
+    }
 
     // Upload image if exists
     if (imageFile) {
@@ -91,10 +98,11 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
     }
 
     setIsUploading(false);
-    onSend(text.trim() || (audioBlob ? '🎤 Voice message' : '📷'), imageUrl, audioUrl);
+    onSend(text.trim() || (audioBlob ? '🎤 Voice message' : gifUrl ? '' : '📷'), imageUrl, audioUrl);
     setText('');
     setImagePreview(null);
     setImageFile(null);
+    setGifUrl(null);
     setAudioBlob(null);
     setRecordingTime(0);
   };
@@ -128,6 +136,18 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
   const clearAudio = () => {
     setAudioBlob(null);
     setRecordingTime(0);
+  };
+
+  const handleGifSelect = (url: string) => {
+    setGifUrl(url);
+    // Clear other attachments
+    setImagePreview(null);
+    setImageFile(null);
+    setAudioBlob(null);
+  };
+
+  const clearGif = () => {
+    setGifUrl(null);
   };
 
   const startRecording = async () => {
@@ -211,6 +231,24 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
         </div>
       )}
 
+      {/* GIF Preview */}
+      {gifUrl && (
+        <div className="mb-2 relative inline-block">
+          <img
+            src={gifUrl}
+            alt="GIF"
+            className="max-h-32 rounded-lg border border-[#242426]"
+          />
+          <button
+            type="button"
+            onClick={clearGif}
+            className="absolute -top-2 -right-2 p-1 bg-[#EF4444] rounded-full text-white hover:bg-[#DC2626] transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
       {/* Audio Preview */}
       {audioBlob && !isRecording && (
         <div className="mb-2 flex items-center gap-3 bg-[#1C1C1E] border border-[#242426] rounded-lg p-3 inline-flex">
@@ -262,10 +300,15 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
         )}
 
         <div className="flex items-center gap-1 pr-1">
-          {!isRecording && !audioBlob && <EmojiPicker onSelect={handleEmojiSelect} />}
+          {!isRecording && !audioBlob && !gifUrl && (
+            <>
+              <GifPicker onSelect={handleGifSelect} />
+              <EmojiPicker onSelect={handleEmojiSelect} />
+            </>
+          )}
 
           {/* Voice record button */}
-          {!text.trim() && !imageFile && !audioBlob ? (
+          {!text.trim() && !imageFile && !audioBlob && !gifUrl ? (
             <button
               type="button"
               onMouseDown={startRecording}
@@ -291,7 +334,7 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
           ) : (
             <button
               type="submit"
-              disabled={(!text.trim() && !imageFile && !audioBlob) || disabled || isUploading}
+              disabled={(!text.trim() && !imageFile && !audioBlob && !gifUrl) || disabled || isUploading}
               className="p-2 bg-[#EDEDED] text-black rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUploading ? (
