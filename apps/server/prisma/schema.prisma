@@ -37,6 +37,7 @@ model Message {
   text      String
   imageUrl  String?
   audioUrl  String?
+  isDeleted Boolean    @default(false)
   createdAt DateTime   @default(now())
   reactions Reaction[]
 }

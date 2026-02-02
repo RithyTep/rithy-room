@@ -23,6 +23,7 @@ export interface Message {
   text: string;
   imageUrl?: string | null;
   audioUrl?: string | null;
+  isDeleted?: boolean;
   createdAt: Date;
   reactions: Reaction[];
 }
@@ -45,6 +46,7 @@ export interface ServerToClientEvents {
   'member-joined': (data: { member: Member }) => void;
   'member-left': (data: { memberId: string }) => void;
   'new-message': (data: { message: Message }) => void;
+  'message-deleted': (data: { messageId: string }) => void;
   'reaction-added': (data: {
     messageId: string;
     reaction: Reaction;
@@ -76,6 +78,7 @@ export interface ClientToServerEvents {
     callback: (response: { success: boolean; error?: string }) => void
   ) => void;
   'send-message': (data: { text: string; imageUrl?: string; audioUrl?: string }) => void;
+  'delete-message': (data: { messageId: string }) => void;
   'react-message': (data: { messageId: string; emoji: string }) => void;
   'remove-reaction': (data: { messageId: string; emoji: string }) => void;
   'update-profile': (

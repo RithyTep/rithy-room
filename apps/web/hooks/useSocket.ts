@@ -17,6 +17,7 @@ export function useSocket() {
     addMessage,
     addReaction,
     removeReaction,
+    deleteMessage,
     setMusicState,
     setConnected,
     setJoining,
@@ -70,6 +71,10 @@ export function useSocket() {
 
     socket.on('new-message', ({ message }) => {
       addMessage(message);
+    });
+
+    socket.on('message-deleted', ({ messageId }) => {
+      deleteMessage(messageId);
     });
 
     socket.on('reaction-added', ({ messageId, reaction }) => {
@@ -130,6 +135,11 @@ export function useSocket() {
     socket.emit('remove-reaction', { messageId, emoji });
   }, []);
 
+  const deleteMessageFromServer = useCallback((messageId: string) => {
+    const socket = getSocket();
+    socket.emit('delete-message', { messageId });
+  }, []);
+
   const joinCall = useCallback(() => {
     const socket = getSocket();
     socket.emit('join-call');
@@ -168,6 +178,7 @@ export function useSocket() {
     sendMessage,
     reactToMessage,
     removeReactionFromMessage,
+    deleteMessage: deleteMessageFromServer,
     joinCall,
     leaveCall,
     syncMusic,

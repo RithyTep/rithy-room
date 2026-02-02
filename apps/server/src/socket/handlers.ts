@@ -168,6 +168,35 @@ export function setupSocketHandlers(io: TypedServer) {
       }
     });
 
+    // Delete message (soft delete - marks as deleted)
+    socket.on('delete-message', async ({ messageId }) => {
+      const memberInfo = socketToMember.get(socket.id);
+      if (!memberInfo) return;
+
+      try {
+        // Verify the message belongs to the user
+        const message = await prisma.message.findUnique({
+          where: { id: messageId },
+        });
+
+        if (!message || message.memberId !== memberInfo.memberId) {
+          socket.emit('error', { message: 'Cannot delete this message' });
+          return;
+        }
+
+        // Soft delete - mark as deleted
+        await prisma.message.update({
+          where: { id: messageId },
+          data: { isDeleted: true },
+        });
+
+        io.to(memberInfo.roomSlug).emit('message-deleted', { messageId });
+      } catch (error) {
+        console.error('Error deleting message:', error);
+        socket.emit('error', { message: 'Failed to delete message' });
+      }
+    });
+
     // React to message
     socket.on('react-message', async ({ messageId, emoji }) => {
       const memberInfo = socketToMember.get(socket.id);

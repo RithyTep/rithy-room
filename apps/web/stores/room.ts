@@ -21,6 +21,7 @@ interface RoomState {
   addMessage: (message: Message) => void;
   addReaction: (messageId: string, reaction: { id: string; messageId: string; memberId: string; emoji: string }) => void;
   removeReaction: (messageId: string, memberId: string, emoji: string) => void;
+  deleteMessage: (messageId: string) => void;
   setCurrentMemberId: (memberId: string) => void;
   setMusicState: (state: MusicState | null) => void;
   setConnected: (connected: boolean) => void;
@@ -113,6 +114,15 @@ export const useRoomStore = create<RoomState>((set, get) => ({
               ),
             }
           : m
+      ),
+    });
+  },
+
+  deleteMessage: (messageId) => {
+    const { messages } = get();
+    set({
+      messages: messages.map((m) =>
+        m.id === messageId ? { ...m, isDeleted: true } : m
       ),
     });
   },

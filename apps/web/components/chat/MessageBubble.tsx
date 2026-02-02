@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Smile, Play, Pause, Youtube } from 'lucide-react';
+import { Smile, Play, Pause, Youtube, Trash2, Ban } from 'lucide-react';
 import { cn, formatTime, generateAvatarUrl } from '@/lib/utils';
 import { useRoomStore } from '@/stores/room';
 import type { Message, Reaction } from '@rithy-room/shared';
@@ -34,6 +34,7 @@ interface MessageBubbleProps {
   message: Message;
   onReact: (messageId: string, emoji: string) => void;
   onRemoveReaction: (messageId: string, emoji: string) => void;
+  onDelete: (messageId: string) => void;
 }
 
 // Group reactions by emoji
@@ -51,8 +52,10 @@ export function MessageBubble({
   message,
   onReact,
   onRemoveReaction,
+  onDelete,
 }: MessageBubbleProps) {
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioProgress, setAudioProgress] = useState(0);
@@ -117,6 +120,40 @@ export function MessageBubble({
     } else {
       onReact(message.id, emoji);
     }
+  };
+
+  // Handle deleted messages
+  if (message.isDeleted) {
+    return (
+      <div className={cn('flex gap-3 group', isOwn ? 'flex-row-reverse' : 'flex-row')}>
+        <img
+          src={message.member.avatarUrl || generateAvatarUrl(message.member.name)}
+          alt={message.member.name}
+          className="w-8 h-8 rounded-full bg-[#2A2A2A] shrink-0 mt-1 object-cover opacity-50"
+        />
+        <div className={cn('max-w-[70%]', isOwn ? 'items-end' : 'items-start')}>
+          <div className={cn('flex items-baseline gap-2 mb-1', isOwn ? 'flex-row-reverse' : 'flex-row')}>
+            <span className="text-[13px] font-medium text-[#555]">
+              {isOwn ? 'You' : message.member.name}
+            </span>
+            <span className="text-[11px] text-[#444]">
+              {formatTime(message.createdAt)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-[#1C1C1E]/50 border border-[#242426] rounded-2xl text-[#555] italic text-[13px]">
+            <Ban className="w-4 h-4" />
+            <span>This message was deleted</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const handleDelete = () => {
+    if (confirm('Delete this message?')) {
+      onDelete(message.id);
+    }
+    setShowActions(false);
   };
 
   return (
@@ -222,16 +259,30 @@ export function MessageBubble({
             })()}
           </div>
 
-          {/* Reaction picker trigger */}
-          <button
-            onClick={() => setShowReactionPicker(!showReactionPicker)}
+          {/* Action buttons */}
+          <div
             className={cn(
-              'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-[#555] hover:text-[#DDD] transition-opacity',
-              isOwn ? '-left-8' : '-right-8'
+              'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity',
+              isOwn ? '-left-16' : '-right-16'
             )}
           >
-            <Smile className="w-4 h-4" />
-          </button>
+            {isOwn && (
+              <button
+                onClick={handleDelete}
+                className="p-1 text-[#555] hover:text-[#EF4444] transition-colors"
+                title="Delete message"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={() => setShowReactionPicker(!showReactionPicker)}
+              className="p-1 text-[#555] hover:text-[#DDD] transition-colors"
+              title="Add reaction"
+            >
+              <Smile className="w-4 h-4" />
+            </button>
+          </div>
 
           {/* Quick reaction picker */}
           {showReactionPicker && (
