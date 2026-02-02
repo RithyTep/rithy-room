@@ -1,31 +1,31 @@
-FROM node:20-slim
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copy root package files
 COPY package*.json ./
-COPY apps/server/package*.json ./apps/server/
-COPY packages/shared/package*.json ./packages/shared/
+COPY turbo.json ./
 
-# Install dependencies
+# Copy packages
+COPY packages/shared ./packages/shared
+COPY apps/server ./apps/server
+
+# Install all dependencies
 RUN npm install
 
-# Copy source
-COPY apps/server ./apps/server
-COPY packages/shared ./packages/shared
-
-# Build shared package
-WORKDIR /app/packages/shared
-RUN npm run build
+# Build shared first
+RUN npm run build --workspace=@rithy-room/shared
 
 # Build server
-WORKDIR /app/apps/server
-RUN npm run build
-RUN npx prisma generate
+RUN npm run build --workspace=@rithy-room/server
 
-# Create uploads directory
+# Generate Prisma client and setup
+WORKDIR /app/apps/server
+RUN npx prisma generate
 RUN mkdir -p uploads
 
+ENV PORT=3001
 EXPOSE 3001
 
+# Start from the server directory
 CMD ["node", "dist/index.js"]
