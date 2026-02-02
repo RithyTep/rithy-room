@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Smile, Play, Pause, Mic } from 'lucide-react';
+import { Smile, Play, Pause } from 'lucide-react';
 import { cn, formatTime, generateAvatarUrl } from '@/lib/utils';
 import { useRoomStore } from '@/stores/room';
 import type { Message, Reaction } from '@rithy-room/shared';
@@ -38,6 +38,8 @@ export function MessageBubble({
   const { currentMemberId } = useRoomStore();
   const reactionGroups = groupReactions(message.reactions);
 
+  const isOwn = message.memberId === currentMemberId;
+
   const toggleAudio = () => {
     if (audioRef.current) {
       if (isPlaying) {
@@ -58,10 +60,8 @@ export function MessageBubble({
   const handleAudioLoadedMetadata = () => {
     if (audioRef.current) {
       const audio = audioRef.current;
-      // WebM files often don't have duration in metadata
-      // Try to get it by seeking to the end
       if (!isFinite(audio.duration)) {
-        audio.currentTime = 1e10; // Seek to large time
+        audio.currentTime = 1e10;
         audio.addEventListener('timeupdate', function getDuration() {
           if (isFinite(audio.duration)) {
             setAudioDuration(audio.duration);
@@ -98,24 +98,36 @@ export function MessageBubble({
   };
 
   return (
-    <div className="flex gap-4 group">
+    <div className={cn('flex gap-3 group', isOwn ? 'flex-row-reverse' : 'flex-row')}>
+      {/* Avatar */}
       <img
         src={generateAvatarUrl(message.member.name)}
         alt={message.member.name}
         className="w-8 h-8 rounded-full bg-[#2A2A2A] shrink-0 mt-1"
       />
-      <div className="flex-1 max-w-2xl">
-        <div className="flex items-baseline gap-2 mb-1">
-          <span className="text-[13px] font-medium text-white">
-            {message.member.name}
+
+      {/* Message content */}
+      <div className={cn('max-w-[70%]', isOwn ? 'items-end' : 'items-start')}>
+        {/* Name and time */}
+        <div className={cn('flex items-baseline gap-2 mb-1', isOwn ? 'flex-row-reverse' : 'flex-row')}>
+          <span className={cn('text-[13px] font-medium', isOwn ? 'text-[#6E56CF]' : 'text-white')}>
+            {isOwn ? 'You' : message.member.name}
           </span>
           <span className="text-[11px] text-[#555]">
             {formatTime(message.createdAt)}
           </span>
         </div>
 
+        {/* Bubble */}
         <div className="relative">
-          <div className="bg-[#1C1C1E] text-[#DDD] text-[14px] leading-relaxed px-4 py-2.5 rounded-2xl rounded-tl-none inline-block border border-[#242426]">
+          <div
+            className={cn(
+              'text-[14px] leading-relaxed px-4 py-2.5 inline-block border',
+              isOwn
+                ? 'bg-[#6E56CF] text-white border-[#7C66D9] rounded-2xl rounded-tr-none'
+                : 'bg-[#1C1C1E] text-[#DDD] border-[#242426] rounded-2xl rounded-tl-none'
+            )}
+          >
             {message.imageUrl && (
               <img
                 src={message.imageUrl}
@@ -142,7 +154,10 @@ export function MessageBubble({
                 />
                 <button
                   onClick={toggleAudio}
-                  className="w-10 h-10 rounded-full bg-[#6E56CF] flex items-center justify-center text-white hover:opacity-90 transition-opacity shrink-0"
+                  className={cn(
+                    'w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-opacity shrink-0',
+                    isOwn ? 'bg-white/20 text-white' : 'bg-[#6E56CF] text-white'
+                  )}
                 >
                   {isPlaying ? (
                     <Pause className="w-5 h-5" />
@@ -151,15 +166,19 @@ export function MessageBubble({
                   )}
                 </button>
                 <div className="flex-1 min-w-[120px]">
-                  <div className="h-1 bg-[#2A2A2A] rounded-full overflow-hidden">
+                  <div className={cn('h-1 rounded-full overflow-hidden', isOwn ? 'bg-white/20' : 'bg-[#2A2A2A]')}>
                     <div
-                      className="h-full bg-[#6E56CF] transition-all"
+                      className={cn('h-full transition-all', isOwn ? 'bg-white' : 'bg-[#6E56CF]')}
                       style={{ width: audioDuration > 0 ? `${(audioProgress / audioDuration) * 100}%` : '0%' }}
                     />
                   </div>
                   <div className="flex justify-between mt-1">
-                    <span className="text-[10px] text-[#555]">{formatAudioTime(audioProgress)}</span>
-                    <span className="text-[10px] text-[#555]">{audioDuration > 0 ? formatAudioTime(audioDuration) : '--:--'}</span>
+                    <span className={cn('text-[10px]', isOwn ? 'text-white/60' : 'text-[#555]')}>
+                      {formatAudioTime(audioProgress)}
+                    </span>
+                    <span className={cn('text-[10px]', isOwn ? 'text-white/60' : 'text-[#555]')}>
+                      {audioDuration > 0 ? formatAudioTime(audioDuration) : '--:--'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -170,7 +189,10 @@ export function MessageBubble({
           {/* Reaction picker trigger */}
           <button
             onClick={() => setShowReactionPicker(!showReactionPicker)}
-            className="absolute -right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-[#555] hover:text-[#DDD] transition-opacity"
+            className={cn(
+              'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-[#555] hover:text-[#DDD] transition-opacity',
+              isOwn ? '-left-8' : '-right-8'
+            )}
           >
             <Smile className="w-4 h-4" />
           </button>
@@ -182,7 +204,12 @@ export function MessageBubble({
                 className="fixed inset-0 z-40"
                 onClick={() => setShowReactionPicker(false)}
               />
-              <div className="absolute left-0 top-full mt-1 z-50 bg-[#161618] border border-[#242426] rounded-full px-2 py-1 shadow-xl flex flex-row flex-nowrap gap-1">
+              <div
+                className={cn(
+                  'absolute top-full mt-1 z-50 bg-[#161618] border border-[#242426] rounded-full px-2 py-1 shadow-xl flex flex-row flex-nowrap gap-1',
+                  isOwn ? 'right-0' : 'left-0'
+                )}
+              >
                 {QUICK_EMOJIS.map((emoji) => (
                   <button
                     key={emoji}
@@ -202,7 +229,7 @@ export function MessageBubble({
 
         {/* Reactions display */}
         {reactionGroups.size > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
+          <div className={cn('flex flex-wrap gap-1 mt-1', isOwn ? 'justify-end' : 'justify-start')}>
             {Array.from(reactionGroups.entries()).map(([emoji, memberIds]) => (
               <button
                 key={emoji}
