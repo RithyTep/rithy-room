@@ -296,6 +296,34 @@ export function setupSocketHandlers(io: TypedServer) {
       socket.to(memberInfo.roomSlug).emit('music-update', musicState);
     });
 
+    // Update profile
+    socket.on('update-profile', async ({ name, avatarUrl }, callback) => {
+      const memberInfo = socketToMember.get(socket.id);
+      if (!memberInfo) {
+        callback({ success: false, error: 'Not in a room' });
+        return;
+      }
+
+      try {
+        const updateData: { name?: string; avatarUrl?: string } = {};
+        if (name) updateData.name = name;
+        if (avatarUrl) updateData.avatarUrl = avatarUrl;
+
+        const updatedMember = await prisma.member.update({
+          where: { id: memberInfo.memberId },
+          data: updateData,
+        });
+
+        // Notify everyone in the room about the update
+        io.to(memberInfo.roomSlug).emit('member-updated', { member: updatedMember });
+
+        callback({ success: true });
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        callback({ success: false, error: 'Failed to update profile' });
+      }
+    });
+
     // Handle disconnect
     socket.on('disconnect', async () => {
       console.log(`Client disconnected: ${socket.id}`);

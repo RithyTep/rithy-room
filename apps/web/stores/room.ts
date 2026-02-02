@@ -15,6 +15,7 @@ interface RoomState {
   setMembers: (members: Member[]) => void;
   addMember: (member: Member) => void;
   removeMember: (memberId: string) => void;
+  updateMember: (member: Member) => void;
   updateMemberPresence: (memberId: string, online: boolean) => void;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
@@ -51,6 +52,17 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   removeMember: (memberId) => {
     const { members } = get();
     set({ members: members.filter((m) => m.id !== memberId) });
+  },
+
+  updateMember: (member) => {
+    const { members, messages } = get();
+    set({
+      members: members.map((m) => (m.id === member.id ? member : m)),
+      // Also update member info in messages
+      messages: messages.map((msg) =>
+        msg.memberId === member.id ? { ...msg, member } : msg
+      ),
+    });
   },
 
   updateMemberPresence: (memberId, online) => {

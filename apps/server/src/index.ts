@@ -3,8 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { setupSocketHandlers } from './socket/handlers.js';
 import type {
   ServerToClientEvents,
@@ -13,6 +12,19 @@ import type {
 
 const app = express();
 const httpServer = createServer(app);
+
+// Configure Cloudflare R2 (S3-compatible)
+const r2Client = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+  },
+});
+
+const R2_BUCKET = process.env.R2_BUCKET_NAME || '';
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: {
@@ -28,28 +40,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Setup uploads directory
-const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Serve uploaded files
-app.use('/uploads', express.static(uploadsDir));
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
+// Configure multer for memory storage (upload to R2)
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB limit
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
@@ -69,9 +62,9 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Upload endpoint
+// Upload endpoint with Cloudflare R2
 app.post('/upload', (req, res, next) => {
-  upload.single('image')(req, res, (err) => {
+  upload.single('image')(req, res, async (err) => {
     if (err) {
       console.error('Upload error:', err);
       return res.status(400).json({ error: err.message });
@@ -79,9 +72,35 @@ app.post('/upload', (req, res, next) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
-    const imageUrl = `/uploads/${req.file.filename}`;
-    console.log('File uploaded:', imageUrl);
-    res.json({ imageUrl });
+
+    try {
+      const isAudio = req.file.mimetype.startsWith('audio/');
+      const folder = isAudio ? 'audio' : 'images';
+      const ext = req.file.originalname.split('.').pop() || (isAudio ? 'webm' : 'jpg');
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      const key = `rithy-room/${folder}/${uniqueName}`;
+
+      // Upload to R2
+      await r2Client.send(new PutObjectCommand({
+        Bucket: R2_BUCKET,
+        Key: key,
+        Body: req.file.buffer,
+        ContentType: req.file.mimetype,
+      }));
+
+      const publicUrl = `${R2_PUBLIC_URL}/${key}`;
+      console.log('File uploaded to R2:', publicUrl);
+
+      // Return appropriate URL field based on file type
+      if (isAudio) {
+        res.json({ audioUrl: publicUrl });
+      } else {
+        res.json({ imageUrl: publicUrl });
+      }
+    } catch (uploadError) {
+      console.error('R2 upload error:', uploadError);
+      res.status(500).json({ error: 'Failed to upload file' });
+    }
   });
 });
 

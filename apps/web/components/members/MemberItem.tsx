@@ -19,9 +19,9 @@ export function MemberItem({
     <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#1C1C1E] group cursor-default transition-colors">
       <div className="relative">
         <img
-          src={generateAvatarUrl(member.name)}
+          src={member.avatarUrl || generateAvatarUrl(member.name)}
           alt={member.name}
-          className="w-8 h-8 rounded-full bg-[#2A2A2A]"
+          className="w-8 h-8 rounded-full bg-[#2A2A2A] object-cover"
         />
         {member.online && (
           <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#161618] rounded-full flex items-center justify-center">

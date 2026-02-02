@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Settings, Mic, MicOff, Headphones, HeadphoneOff } from 'lucide-react';
 import { useRoomStore } from '@/stores/room';
 import { useMediaStore } from '@/stores/media';
+import { useSocket } from '@/hooks/useSocket';
 import { MemberItem } from './MemberItem';
 import { SettingsModal } from '@/components/ui/SettingsModal';
 import { generateAvatarUrl } from '@/lib/utils';
@@ -12,15 +13,20 @@ import { cn } from '@/lib/utils';
 export function MemberList() {
   const { room, members, currentMemberId, reset } = useRoomStore();
   const { isMuted, isDeafened, setMuted, setDeafened, localStream } = useMediaStore();
+  const { updateProfile } = useSocket();
   const [showSettings, setShowSettings] = useState(false);
 
   const onlineMembers = members.filter((m) => m.online);
   const offlineMembers = members.filter((m) => !m.online);
   const currentMember = members.find((m) => m.id === currentMemberId);
 
-  const handleNameChange = (newName: string) => {
-    // Reload the page to rejoin with new name
-    window.location.reload();
+  const handleProfileUpdate = async (name?: string, avatarUrl?: string): Promise<boolean> => {
+    const success = await updateProfile(name, avatarUrl);
+    if (success && name) {
+      // Reload the page to rejoin with new name
+      window.location.reload();
+    }
+    return success;
   };
 
   const handleLeaveRoom = () => {
@@ -42,13 +48,18 @@ export function MemberList() {
     }
   };
 
+  const getAvatarUrl = (member: typeof currentMember) => {
+    return member?.avatarUrl || generateAvatarUrl(member?.name || '');
+  };
+
   return (
     <>
       <SettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
         currentName={currentMember?.name || ''}
-        onNameChange={handleNameChange}
+        currentAvatarUrl={currentMember?.avatarUrl}
+        onProfileUpdate={handleProfileUpdate}
         onLeaveRoom={handleLeaveRoom}
       />
       <aside className="hidden md:flex w-64 bg-[#161618] border-r border-[#242426] flex-col shrink-0">
@@ -99,9 +110,9 @@ export function MemberList() {
           <div className="p-3 border-t border-[#242426]">
             <div className="flex items-center gap-3 p-2 rounded-lg bg-[#1C1C1E]">
               <img
-                src={generateAvatarUrl(currentMember.name)}
+                src={getAvatarUrl(currentMember)}
                 alt={currentMember.name}
-                className="w-8 h-8 rounded-full bg-[#333]"
+                className="w-8 h-8 rounded-full bg-[#333] object-cover"
               />
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-medium text-white truncate">

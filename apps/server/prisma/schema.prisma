@@ -20,6 +20,7 @@ model Member {
   roomId    String
   room      Room       @relation(fields: [roomId], references: [id], onDelete: Cascade)
   name      String
+  avatarUrl String?
   online    Boolean    @default(true)
   socketId  String?
   createdAt DateTime   @default(now())

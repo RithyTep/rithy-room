@@ -9,6 +9,7 @@ export interface Member {
   id: string;
   roomId: string;
   name: string;
+  avatarUrl?: string | null;
   online: boolean;
   socketId: string | null;
   createdAt: Date;
@@ -54,6 +55,7 @@ export interface ServerToClientEvents {
     emoji: string;
   }) => void;
   'presence-update': (data: { memberId: string; online: boolean }) => void;
+  'member-updated': (data: { member: Member }) => void;
   'webrtc-signal': (data: {
     from: string;
     signal: RTCSignalData;
@@ -76,6 +78,10 @@ export interface ClientToServerEvents {
   'send-message': (data: { text: string; imageUrl?: string; audioUrl?: string }) => void;
   'react-message': (data: { messageId: string; emoji: string }) => void;
   'remove-reaction': (data: { messageId: string; emoji: string }) => void;
+  'update-profile': (
+    data: { name?: string; avatarUrl?: string },
+    callback: (response: { success: boolean; error?: string }) => void
+  ) => void;
   'join-call': () => void;
   'leave-call': () => void;
   'webrtc-signal': (data: { to: string; signal: RTCSignalData }) => void;

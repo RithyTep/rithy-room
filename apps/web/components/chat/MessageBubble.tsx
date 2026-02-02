@@ -101,9 +101,9 @@ export function MessageBubble({
     <div className={cn('flex gap-3 group', isOwn ? 'flex-row-reverse' : 'flex-row')}>
       {/* Avatar */}
       <img
-        src={generateAvatarUrl(message.member.name)}
+        src={message.member.avatarUrl || generateAvatarUrl(message.member.name)}
         alt={message.member.name}
-        className="w-8 h-8 rounded-full bg-[#2A2A2A] shrink-0 mt-1"
+        className="w-8 h-8 rounded-full bg-[#2A2A2A] shrink-0 mt-1 object-cover"
       />
 
       {/* Message content */}

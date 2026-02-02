@@ -46,7 +46,8 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
 
         if (response.ok) {
           const data = await response.json();
-          imageUrl = `${serverUrl}${data.imageUrl}`;
+          // Cloudinary returns full URL directly
+          imageUrl = data.imageUrl;
         } else {
           alert('Failed to upload image.');
           setIsUploading(false);
@@ -74,7 +75,8 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
 
         if (response.ok) {
           const data = await response.json();
-          audioUrl = `${serverUrl}${data.imageUrl}`;
+          // Cloudinary returns full URL directly
+          audioUrl = data.audioUrl;
         } else {
           alert('Failed to upload voice message.');
           setIsUploading(false);

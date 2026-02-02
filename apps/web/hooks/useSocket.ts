@@ -12,6 +12,7 @@ export function useSocket() {
     setMessages,
     setCurrentMemberId,
     addMember,
+    updateMember,
     updateMemberPresence,
     addMessage,
     addReaction,
@@ -61,6 +62,10 @@ export function useSocket() {
 
     socket.on('presence-update', ({ memberId, online }) => {
       updateMemberPresence(memberId, online);
+    });
+
+    socket.on('member-updated', ({ member }) => {
+      updateMember(member);
     });
 
     socket.on('new-message', ({ message }) => {
@@ -148,6 +153,15 @@ export function useSocket() {
     }
   }, []);
 
+  const updateProfile = useCallback((name?: string, avatarUrl?: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const socket = getSocket();
+      socket.emit('update-profile', { name, avatarUrl }, (response) => {
+        resolve(response.success);
+      });
+    });
+  }, []);
+
   return {
     socket: getSocket(),
     joinRoom,
@@ -157,5 +171,6 @@ export function useSocket() {
     joinCall,
     leaveCall,
     syncMusic,
+    updateProfile,
   };
 }
