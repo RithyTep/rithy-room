@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npm run build --filter=@rithy-room/shared && npm run build --filter=@rithy-room/web",
+  "outputDirectory": "apps/web/.next",
+  "framework": "nextjs",
+  "installCommand": "npm install"
+}
