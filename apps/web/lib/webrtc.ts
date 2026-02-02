@@ -26,9 +26,10 @@ export class WebRTCManager {
     this.socket.on('webrtc-signal', this.handleSignal.bind(this));
   }
 
+  // Start with audio only (no camera by default)
   async getUserMedia(): Promise<MediaStream> {
     this.localStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
+      video: false,
       audio: true,
     });
     return this.localStream;
@@ -36,6 +37,67 @@ export class WebRTCManager {
 
   setLocalStream(stream: MediaStream) {
     this.localStream = stream;
+  }
+
+  getLocalStream(): MediaStream | null {
+    return this.localStream;
+  }
+
+  // Enable camera - adds video track
+  async enableCamera(): Promise<MediaStream | null> {
+    if (!this.localStream) return null;
+
+    try {
+      const videoStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+
+      const videoTrack = videoStream.getVideoTracks()[0];
+      this.localStream.addTrack(videoTrack);
+
+      // Add video track to all peer connections
+      this.peerConnections.forEach((pc) => {
+        pc.addTrack(videoTrack, this.localStream!);
+      });
+
+      return this.localStream;
+    } catch (error) {
+      console.error('Failed to enable camera:', error);
+      return null;
+    }
+  }
+
+  // Disable camera - removes and stops video track
+  disableCamera(): void {
+    if (!this.localStream) return;
+
+    const videoTracks = this.localStream.getVideoTracks();
+    videoTracks.forEach((track) => {
+      // Stop the track (turns off camera light)
+      track.stop();
+      // Remove from local stream
+      this.localStream!.removeTrack(track);
+
+      // Remove from all peer connections
+      this.peerConnections.forEach((pc) => {
+        const senders = pc.getSenders();
+        const videoSender = senders.find((s) => s.track === track);
+        if (videoSender) {
+          pc.removeTrack(videoSender);
+        }
+      });
+    });
+  }
+
+  // Toggle mute - enables/disables audio track without stopping it
+  toggleMute(mute: boolean): void {
+    if (!this.localStream) return;
+
+    const audioTracks = this.localStream.getAudioTracks();
+    audioTracks.forEach((track) => {
+      track.enabled = !mute;
+    });
   }
 
   private createPeerConnection(memberId: string): RTCPeerConnection {

@@ -22,6 +22,7 @@ export function useWebRTC(socket: TypedSocket) {
     callParticipants,
     localStream,
     isScreenSharing,
+    isCameraOff,
     reset: resetMedia,
   } = useMediaStore();
   const { currentMemberId } = useRoomStore();
@@ -56,14 +57,17 @@ export function useWebRTC(socket: TypedSocket) {
     }
 
     try {
+      // Start with audio only (no camera)
       const stream = await managerRef.current.getUserMedia();
       setLocalStream(stream);
       setInCall(true);
+      setCameraOff(true); // Camera is off by default
+      setMuted(false);
       getSocket().emit('join-call');
     } catch (error) {
       console.error('Failed to get user media:', error);
     }
-  }, [setLocalStream, setInCall, addRemoteStream, removeRemoteStream]);
+  }, [setLocalStream, setInCall, setCameraOff, setMuted, addRemoteStream, removeRemoteStream]);
 
   const endCall = useCallback(() => {
     if (managerRef.current) {
@@ -78,9 +82,10 @@ export function useWebRTC(socket: TypedSocket) {
     setScreenStream(null);
     setInCall(false);
     setScreenSharing(false);
+    setCameraOff(true);
     getSocket().emit('leave-call');
     resetMedia();
-  }, [setLocalStream, setScreenStream, setInCall, setScreenSharing, resetMedia]);
+  }, [setLocalStream, setScreenStream, setInCall, setScreenSharing, setCameraOff, resetMedia]);
 
   // Connect to new participants
   useEffect(() => {
@@ -97,13 +102,40 @@ export function useWebRTC(socket: TypedSocket) {
 
   const toggleMute = useCallback(() => {
     const { isMuted } = useMediaStore.getState();
-    setMuted(!isMuted);
+    const newMuted = !isMuted;
+    setMuted(newMuted);
+
+    // Actually mute/unmute the audio track
+    if (managerRef.current) {
+      managerRef.current.toggleMute(newMuted);
+    }
   }, [setMuted]);
 
-  const toggleCamera = useCallback(() => {
+  const toggleCamera = useCallback(async () => {
     const { isCameraOff } = useMediaStore.getState();
-    setCameraOff(!isCameraOff);
-  }, [setCameraOff]);
+
+    if (isCameraOff) {
+      // Turn camera ON
+      if (managerRef.current) {
+        const updatedStream = await managerRef.current.enableCamera();
+        if (updatedStream) {
+          setLocalStream(updatedStream);
+          setCameraOff(false);
+        }
+      }
+    } else {
+      // Turn camera OFF (stops the camera, turns off Mac camera light)
+      if (managerRef.current) {
+        managerRef.current.disableCamera();
+        setCameraOff(true);
+        // Update local stream reference
+        const stream = managerRef.current.getLocalStream();
+        if (stream) {
+          setLocalStream(stream);
+        }
+      }
+    }
+  }, [setLocalStream, setCameraOff]);
 
   const toggleScreenShare = useCallback(async () => {
     const { isScreenSharing, screenStream } = useMediaStore.getState();
