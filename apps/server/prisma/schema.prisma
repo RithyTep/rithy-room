@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Room {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  members   Member[]
+  messages  Message[]
+}
+
+model Member {
+  id        String     @id @default(cuid())
+  roomId    String
+  room      Room       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  name      String
+  online    Boolean    @default(true)
+  socketId  String?
+  createdAt DateTime   @default(now())
+  messages  Message[]
+  reactions Reaction[]
+}
+
+model Message {
+  id        String     @id @default(cuid())
+  roomId    String
+  room      Room       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  text      String
+  imageUrl  String?
+  audioUrl  String?
+  createdAt DateTime   @default(now())
+  reactions Reaction[]
+}
+
+model Reaction {
+  id        String  @id @default(cuid())
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  emoji     String
+
+  @@unique([messageId, memberId, emoji])
+}

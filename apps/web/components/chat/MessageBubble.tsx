@@ -1,0 +1,228 @@
+'use client';
+
+import { useState, useRef } from 'react';
+import { Smile, Play, Pause, Mic } from 'lucide-react';
+import { cn, formatTime, generateAvatarUrl } from '@/lib/utils';
+import { useRoomStore } from '@/stores/room';
+import type { Message, Reaction } from '@rithy-room/shared';
+
+const QUICK_EMOJIS = ['👍', '❤️', '😂', '👀', '🔥'];
+
+interface MessageBubbleProps {
+  message: Message;
+  onReact: (messageId: string, emoji: string) => void;
+  onRemoveReaction: (messageId: string, emoji: string) => void;
+}
+
+// Group reactions by emoji
+function groupReactions(reactions: Reaction[]): Map<string, string[]> {
+  const groups = new Map<string, string[]>();
+  reactions.forEach((r) => {
+    const existing = groups.get(r.emoji) || [];
+    existing.push(r.memberId);
+    groups.set(r.emoji, existing);
+  });
+  return groups;
+}
+
+export function MessageBubble({
+  message,
+  onReact,
+  onRemoveReaction,
+}: MessageBubbleProps) {
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const { currentMemberId } = useRoomStore();
+  const reactionGroups = groupReactions(message.reactions);
+
+  const toggleAudio = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleAudioTimeUpdate = () => {
+    if (audioRef.current) {
+      setAudioProgress(audioRef.current.currentTime);
+    }
+  };
+
+  const handleAudioLoadedMetadata = () => {
+    if (audioRef.current) {
+      const audio = audioRef.current;
+      // WebM files often don't have duration in metadata
+      // Try to get it by seeking to the end
+      if (!isFinite(audio.duration)) {
+        audio.currentTime = 1e10; // Seek to large time
+        audio.addEventListener('timeupdate', function getDuration() {
+          if (isFinite(audio.duration)) {
+            setAudioDuration(audio.duration);
+            audio.currentTime = 0;
+            audio.removeEventListener('timeupdate', getDuration);
+          }
+        });
+      } else {
+        setAudioDuration(audio.duration);
+      }
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+    setAudioProgress(0);
+  };
+
+  const formatAudioTime = (seconds: number) => {
+    if (!seconds || !isFinite(seconds) || isNaN(seconds)) {
+      return '0:00';
+    }
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleReactionClick = (emoji: string, memberIds: string[]) => {
+    if (currentMemberId && memberIds.includes(currentMemberId)) {
+      onRemoveReaction(message.id, emoji);
+    } else {
+      onReact(message.id, emoji);
+    }
+  };
+
+  return (
+    <div className="flex gap-4 group">
+      <img
+        src={generateAvatarUrl(message.member.name)}
+        alt={message.member.name}
+        className="w-8 h-8 rounded-full bg-[#2A2A2A] shrink-0 mt-1"
+      />
+      <div className="flex-1 max-w-2xl">
+        <div className="flex items-baseline gap-2 mb-1">
+          <span className="text-[13px] font-medium text-white">
+            {message.member.name}
+          </span>
+          <span className="text-[11px] text-[#555]">
+            {formatTime(message.createdAt)}
+          </span>
+        </div>
+
+        <div className="relative">
+          <div className="bg-[#1C1C1E] text-[#DDD] text-[14px] leading-relaxed px-4 py-2.5 rounded-2xl rounded-tl-none inline-block border border-[#242426]">
+            {message.imageUrl && (
+              <img
+                src={message.imageUrl}
+                alt="Shared image"
+                className="max-w-xs rounded-lg mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => window.open(message.imageUrl!, '_blank')}
+              />
+            )}
+            {message.audioUrl && (
+              <div className="flex items-center gap-3 min-w-[200px]">
+                <audio
+                  ref={audioRef}
+                  src={message.audioUrl}
+                  preload="metadata"
+                  onTimeUpdate={handleAudioTimeUpdate}
+                  onLoadedMetadata={handleAudioLoadedMetadata}
+                  onDurationChange={() => {
+                    if (audioRef.current && isFinite(audioRef.current.duration)) {
+                      setAudioDuration(audioRef.current.duration);
+                    }
+                  }}
+                  onEnded={handleAudioEnded}
+                  className="hidden"
+                />
+                <button
+                  onClick={toggleAudio}
+                  className="w-10 h-10 rounded-full bg-[#6E56CF] flex items-center justify-center text-white hover:opacity-90 transition-opacity shrink-0"
+                >
+                  {isPlaying ? (
+                    <Pause className="w-5 h-5" />
+                  ) : (
+                    <Play className="w-5 h-5 ml-0.5" />
+                  )}
+                </button>
+                <div className="flex-1 min-w-[120px]">
+                  <div className="h-1 bg-[#2A2A2A] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#6E56CF] transition-all"
+                      style={{ width: audioDuration > 0 ? `${(audioProgress / audioDuration) * 100}%` : '0%' }}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-[10px] text-[#555]">{formatAudioTime(audioProgress)}</span>
+                    <span className="text-[10px] text-[#555]">{audioDuration > 0 ? formatAudioTime(audioDuration) : '--:--'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {message.text && !message.text.startsWith('🎤') && <div>{message.text}</div>}
+          </div>
+
+          {/* Reaction picker trigger */}
+          <button
+            onClick={() => setShowReactionPicker(!showReactionPicker)}
+            className="absolute -right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-[#555] hover:text-[#DDD] transition-opacity"
+          >
+            <Smile className="w-4 h-4" />
+          </button>
+
+          {/* Quick reaction picker */}
+          {showReactionPicker && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowReactionPicker(false)}
+              />
+              <div className="absolute left-0 top-full mt-1 z-50 bg-[#161618] border border-[#242426] rounded-full px-2 py-1 shadow-xl flex flex-row flex-nowrap gap-1">
+                {QUICK_EMOJIS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => {
+                      onReact(message.id, emoji);
+                      setShowReactionPicker(false);
+                    }}
+                    className="w-7 h-7 flex items-center justify-center text-sm hover:bg-[#1C1C1E] rounded-full transition-colors shrink-0"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Reactions display */}
+        {reactionGroups.size > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {Array.from(reactionGroups.entries()).map(([emoji, memberIds]) => (
+              <button
+                key={emoji}
+                onClick={() => handleReactionClick(emoji, memberIds)}
+                className={cn(
+                  'flex items-center gap-1 bg-[#1C1C1E] border rounded-full px-2 py-0.5 transition-colors',
+                  currentMemberId && memberIds.includes(currentMemberId)
+                    ? 'border-[#6E56CF] bg-[#6E56CF]/10'
+                    : 'border-[#2A2A2A] hover:border-[#444]'
+                )}
+              >
+                <span className="text-[12px]">{emoji}</span>
+                <span className="text-[10px] font-medium text-[#888]">
+                  {memberIds.length}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
