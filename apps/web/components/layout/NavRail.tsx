@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Icon } from '@iconify/react';
 import { generateAvatarUrl } from '@/lib/utils';
 
@@ -7,14 +8,12 @@ interface NavRailProps {
   userAvatarUrl?: string;
   userName?: string;
   onUserClick?: () => void;
-  onGamesClick?: () => void;
 }
 
 export function NavRail({
   userAvatarUrl,
   userName,
   onUserClick,
-  onGamesClick,
 }: NavRailProps) {
   return (
     <nav className="hidden md:flex glass-panel w-[72px] rounded-2xl flex-col items-center py-6 gap-6 shrink-0 z-20">
@@ -40,13 +39,13 @@ export function NavRail({
         </div>
 
         {/* Games */}
-        <button
-          onClick={onGamesClick}
+        <Link
+          href="/games"
           className="w-full aspect-square rounded-xl flex items-center justify-center transition-all bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 border border-transparent"
           title="Games"
         >
           <Icon icon="solar:gamepad-linear" width={22} />
-        </button>
+        </Link>
       </div>
 
       {/* Bottom User Avatar */}
