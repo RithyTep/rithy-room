@@ -124,7 +124,7 @@ export interface GameItem {
   thumbnail: string;
   url: string;
   maxPlayers: string;
-  category: 'action' | 'racing' | 'puzzle' | 'sports' | 'io';
+  category: 'action' | 'racing' | 'puzzle' | 'sports' | 'io' | 'n64' | 'ps1' | 'gba' | 'nes' | 'snes';
   tags: string[];
 }
 
