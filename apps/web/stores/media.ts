@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+export type ViewMode = 'chat' | 'call';
+
 interface MediaState {
   localStream: MediaStream | null;
   screenStream: MediaStream | null;
@@ -12,6 +14,7 @@ interface MediaState {
   volume: number;
   callParticipants: string[];
   participantsToCall: string[]; // Participants we should initiate calls to
+  viewMode: ViewMode;
 
   // Actions
   setLocalStream: (stream: MediaStream | null) => void;
@@ -28,6 +31,7 @@ interface MediaState {
   addParticipantToCall: (memberId: string) => void; // Add to both display and call queue
   removeCallParticipant: (memberId: string) => void;
   clearParticipantsToCall: () => void;
+  setViewMode: (mode: ViewMode) => void;
   reset: () => void;
 }
 
@@ -43,6 +47,7 @@ export const useMediaStore = create<MediaState>((set, get) => ({
   volume: 100,
   callParticipants: [],
   participantsToCall: [],
+  viewMode: 'chat',
 
   setLocalStream: (stream) => set({ localStream: stream }),
 
@@ -126,6 +131,8 @@ export const useMediaStore = create<MediaState>((set, get) => ({
   clearParticipantsToCall: () =>
     set({ participantsToCall: [] }),
 
+  setViewMode: (viewMode) => set({ viewMode }),
+
   reset: () =>
     set({
       localStream: null,
@@ -139,5 +146,6 @@ export const useMediaStore = create<MediaState>((set, get) => ({
       volume: 100,
       callParticipants: [],
       participantsToCall: [],
+      viewMode: 'chat',
     }),
 }));

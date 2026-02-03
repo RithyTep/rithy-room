@@ -1,16 +1,19 @@
 'use client';
 
 import { useEffect, useState, useRef, use } from 'react';
-import { Users, Mic, MicOff, Video, VideoOff, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { Icon } from '@iconify/react';
 import { useSocket } from '@/hooks/useSocket';
 import { useRoomStore } from '@/stores/room';
-import { MemberList } from '@/components/members/MemberList';
-import { MessageList } from '@/components/chat/MessageList';
-import { VideoGrid } from '@/components/video/VideoGrid';
-import { MobileNav, type MobileView } from '@/components/mobile/MobileNav';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useMediaStore } from '@/stores/media';
+import { JoinScreen } from '@/components/layout/JoinScreen';
+import { NavRail } from '@/components/layout/NavRail';
+import { ChatPanel } from '@/components/layout/ChatPanel';
+import { UsersPanel } from '@/components/layout/UsersPanel';
+import { CallView } from '@/components/video/CallView';
+import { SettingsModal } from '@/components/ui/SettingsModal';
 import { getSession, saveSession } from '@/lib/session';
+import { generateAvatarUrl } from '@/lib/utils';
 
 interface RoomPageProps {
   params: Promise<{ slug: string }>;
@@ -18,23 +21,21 @@ interface RoomPageProps {
 
 export default function RoomPage({ params }: RoomPageProps) {
   const { slug } = use(params);
-  const { joinRoom } = useSocket();
-  const { room, isConnected, isJoining, error, members } = useRoomStore();
+  const { joinRoom, updateProfile } = useSocket();
+  const { room, isConnected, isJoining, error, members, currentMemberId, reset } = useRoomStore();
+  const { viewMode } = useMediaStore();
 
-  const [name, setName] = useState('');
-  const [micEnabled, setMicEnabled] = useState(true);
-  const [camEnabled, setCamEnabled] = useState(true);
   const [hasSession, setHasSession] = useState<boolean | null>(null);
-  const [mobileView, setMobileView] = useState<MobileView>('chat');
+  const [showUserPanel, setShowUserPanel] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const joinAttempted = useRef(false);
+
+  const currentMember = members.find((m) => m.id === currentMemberId);
 
   // Check for saved session on mount
   useEffect(() => {
     const savedName = getSession();
     setHasSession(!!savedName);
-    if (savedName) {
-      setName(savedName);
-    }
   }, []);
 
   // Auto-join when connected and have a saved name
@@ -46,7 +47,7 @@ export default function RoomPage({ params }: RoomPageProps) {
     }
   }, [isConnected, room, slug, joinRoom, isJoining]);
 
-  const handleJoin = () => {
+  const handleJoin = (name: string) => {
     if (name.trim() && isConnected && !isJoining) {
       joinAttempted.current = true;
       saveSession(name.trim());
@@ -54,128 +55,129 @@ export default function RoomPage({ params }: RoomPageProps) {
     }
   };
 
-  // Show minimal loading when auto-rejoining (has saved session)
+  const handleProfileUpdate = async (name?: string, avatarUrl?: string): Promise<boolean> => {
+    const success = await updateProfile(name, avatarUrl);
+    if (success && name) {
+      window.location.reload();
+    }
+    return success;
+  };
+
+  const handleLeaveRoom = () => {
+    reset();
+    window.location.href = '/';
+  };
+
+  // Show minimal loading when auto-rejoining
   if (!room && hasSession && !error) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#121212]">
+      <div className="h-screen w-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-[#6E56CF] animate-spin" />
-          <span className="text-[13px] text-[#888]">Rejoining {slug}...</span>
+          <Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin" />
+          <span className="text-[13px] text-slate-500">Rejoining {slug}...</span>
         </div>
       </div>
     );
   }
 
-  // Show join modal for new users (no saved session)
+  // Show join screen for new users
   if (!room) {
     // Still checking for session
     if (hasSession === null) {
       return (
-        <div className="h-screen w-full flex items-center justify-center bg-[#121212]">
-          <Loader2 className="w-8 h-8 text-[#6E56CF] animate-spin" />
+        <div className="h-screen w-full flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin" />
         </div>
       );
     }
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-[#121212]">
-        <div className="bg-[#1C1C1E] border border-[#2A2A2A] rounded-xl p-8 w-full max-w-sm shadow-2xl">
-          <div className="flex flex-col items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-full bg-[#2A2A2A] flex items-center justify-center text-[#6E56CF]">
-              <Users className="w-8 h-8" />
-            </div>
-            <div className="text-center">
-              <h2 className="text-lg font-medium tracking-tight text-white">
-                {slug}
-              </h2>
-              <p className="text-[11px] mt-1">
-                {!isConnected && <span className="text-[#555]">Connecting...</span>}
-                {isConnected && !isJoining && <span className="text-[#4ADE80]">Connected</span>}
-                {isJoining && <span className="text-[#6E56CF]">Joining...</span>}
-              </p>
-            </div>
-          </div>
-
-          {error && (
-            <div className="mb-4 p-3 bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-lg text-[#EF4444] text-[13px]">
-              {error}
-            </div>
-          )}
-
-          <Input
-            type="text"
-            placeholder="Enter your name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleJoin();
-            }}
-            className="mb-4"
-            autoFocus
-          />
-
-          <div className="flex gap-3 mb-6">
-            <button
-              onClick={() => setMicEnabled(!micEnabled)}
-              className={`flex-1 py-3 rounded-lg border transition-colors flex items-center justify-center ${
-                micEnabled
-                  ? 'border-[#2A2A2A] hover:bg-[#2A2A2A] text-[#888]'
-                  : 'border-[#EF4444]/50 bg-[#EF4444]/10 text-[#EF4444]'
-              }`}
-            >
-              {micEnabled ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-            </button>
-            <button
-              onClick={() => setCamEnabled(!camEnabled)}
-              className={`flex-1 py-3 rounded-lg border transition-colors flex items-center justify-center ${
-                camEnabled
-                  ? 'border-[#2A2A2A] hover:bg-[#2A2A2A] text-[#888]'
-                  : 'border-[#EF4444]/50 bg-[#EF4444]/10 text-[#EF4444]'
-              }`}
-            >
-              {camEnabled ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
-            </button>
-          </div>
-
-          <Button
-            onClick={handleJoin}
-            disabled={!name.trim() || !isConnected || isJoining}
-            className="w-full"
-          >
-            Join Room
-          </Button>
-        </div>
-      </div>
+      <JoinScreen
+        roomSlug={slug}
+        isConnected={isConnected}
+        isJoining={isJoining}
+        error={error}
+        onJoin={handleJoin}
+      />
     );
   }
 
-  // Main room view
+  // Show call view if in call mode
+  if (viewMode === 'call') {
+    return <CallView />;
+  }
+
+  // Main chat view
   return (
-    <div className="h-screen w-full flex flex-col md:flex-row overflow-hidden bg-[#121212]">
-      {/* Mobile Header */}
-      <div className="md:hidden h-12 flex items-center px-4 border-b border-[#242426] bg-[#161618]">
-        <span className="font-medium text-[15px] text-white">{room.slug}</span>
-        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-[#242426] text-[#888]">
-          {members.filter((m) => m.online).length} Online
-        </span>
-      </div>
+    <>
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        currentName={currentMember?.name || ''}
+        currentAvatarUrl={currentMember?.avatarUrl}
+        onProfileUpdate={handleProfileUpdate}
+        onLeaveRoom={handleLeaveRoom}
+      />
 
-      {/* Desktop Layout - always show all panels */}
-      <div className="hidden md:contents">
-        <MemberList />
-        <MessageList />
-        <VideoGrid />
-      </div>
+      <div className="h-screen w-full overflow-hidden">
+        {/* Mobile Header */}
+        <div className="md:hidden h-14 border-b border-white/5 flex items-center justify-between px-4 bg-black/20 backdrop-blur-md sticky top-0 z-30">
+          <button className="text-slate-400">
+            <Icon icon="solar:hamburger-menu-linear" width={24} />
+          </button>
+          <span className="font-medium text-white">#{slug}</span>
+          <button className="text-slate-400" onClick={() => setShowUserPanel(true)}>
+            <Icon icon="solar:users-group-rounded-linear" width={24} />
+          </button>
+        </div>
 
-      {/* Mobile Layout - show based on active tab */}
-      <div className="md:hidden flex-1 flex flex-col overflow-hidden pb-14">
-        {mobileView === 'chat' && <MessageList isMobile />}
-        {mobileView === 'members' && <MemberList isMobile />}
-        {mobileView === 'call' && <VideoGrid isMobile />}
-      </div>
+        {/* Desktop Layout */}
+        <div className="h-full w-full max-w-[1600px] mx-auto p-0 md:p-6 flex gap-5">
+          {/* Nav Rail */}
+          <NavRail
+            activeItem="chat"
+            userAvatarUrl={currentMember?.avatarUrl || generateAvatarUrl(currentMember?.name || '')}
+            userName={currentMember?.name}
+            onUserClick={() => setShowSettings(true)}
+          />
 
-      {/* Mobile Navigation */}
-      <MobileNav activeView={mobileView} onViewChange={setMobileView} />
-    </div>
+          {/* Chat Panel */}
+          <ChatPanel
+            roomSlug={slug}
+            onToggleUsers={() => setShowUserPanel(true)}
+            isMobile={false}
+          />
+
+          {/* Users Panel - Desktop */}
+          <UsersPanel />
+
+          {/* Users Panel - Mobile */}
+          <UsersPanel
+            isMobile
+            isOpen={showUserPanel}
+            onClose={() => setShowUserPanel(false)}
+          />
+        </div>
+
+        {/* Mobile Bottom Nav */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-black/40 backdrop-blur-md border-t border-white/5 flex items-center justify-around px-6 safe-area-bottom">
+          <button className="flex flex-col items-center gap-1 text-[var(--accent)]">
+            <Icon icon="solar:chat-round-line-linear" width={22} />
+            <span className="text-[10px]">Chat</span>
+          </button>
+          <button className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 transition-colors">
+            <Icon icon="solar:phone-linear" width={22} />
+            <span className="text-[10px]">Call</span>
+          </button>
+          <button
+            onClick={() => setShowUserPanel(true)}
+            className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <Icon icon="solar:users-group-rounded-linear" width={22} />
+            <span className="text-[10px]">Members</span>
+          </button>
+        </div>
+      </div>
+    </>
   );
 }

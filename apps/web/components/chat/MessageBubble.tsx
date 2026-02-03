@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Smile, Play, Pause, Youtube, Trash2, Ban } from 'lucide-react';
+import { Icon } from '@iconify/react';
+import { Play, Pause, Youtube, Ban } from 'lucide-react';
 import { cn, formatTime, generateAvatarUrl } from '@/lib/utils';
 import { useRoomStore } from '@/stores/room';
 import type { Message, Reaction } from '@rithy-room/shared';
@@ -55,7 +56,6 @@ export function MessageBubble({
   onDelete,
 }: MessageBubbleProps) {
   const [showReactionPicker, setShowReactionPicker] = useState(false);
-  const [showActions, setShowActions] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioProgress, setAudioProgress] = useState(0);
@@ -125,22 +125,22 @@ export function MessageBubble({
   // Handle deleted messages
   if (message.isDeleted) {
     return (
-      <div className={cn('flex gap-3 group', isOwn ? 'flex-row-reverse' : 'flex-row')}>
-        <img
-          src={message.member.avatarUrl || generateAvatarUrl(message.member.name)}
-          alt={message.member.name}
-          className="w-8 h-8 rounded-full bg-[#2A2A2A] shrink-0 mt-1 object-cover opacity-50"
-        />
-        <div className={cn('max-w-[70%]', isOwn ? 'items-end' : 'items-start')}>
-          <div className={cn('flex items-baseline gap-2 mb-1', isOwn ? 'flex-row-reverse' : 'flex-row')}>
-            <span className="text-[13px] font-medium text-[#555]">
+      <div className="group flex gap-3 px-2 py-2 rounded-xl">
+        <div className="shrink-0 pt-1">
+          <img
+            src={message.member.avatarUrl || generateAvatarUrl(message.member.name)}
+            alt={message.member.name}
+            className="w-8 h-8 rounded-lg object-cover bg-slate-800 opacity-50"
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-xs font-medium text-slate-500">
               {isOwn ? 'You' : message.member.name}
             </span>
-            <span className="text-[11px] text-[#444]">
-              {formatTime(message.createdAt)}
-            </span>
+            <span className="text-[10px] text-slate-600">{formatTime(message.createdAt)}</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-[#1C1C1E]/50 border border-[#242426] rounded-2xl text-[#555] italic text-[13px]">
+          <div className="flex items-center gap-2 text-slate-500 italic text-[13px]">
             <Ban className="w-4 h-4" />
             <span>This message was deleted</span>
           </div>
@@ -153,96 +153,96 @@ export function MessageBubble({
     if (confirm('Delete this message?')) {
       onDelete(message.id);
     }
-    setShowActions(false);
   };
 
   return (
-    <div className={cn('flex gap-3 group', isOwn ? 'flex-row-reverse' : 'flex-row')}>
+    <div
+      className={cn(
+        'group flex gap-3 px-2 py-2 rounded-xl transition-colors',
+        isOwn
+          ? 'bg-[var(--accent)]/[0.04] border border-[var(--accent)]/[0.05]'
+          : 'hover:bg-white/[0.02]'
+      )}
+    >
       {/* Avatar */}
-      <img
-        src={message.member.avatarUrl || generateAvatarUrl(message.member.name)}
-        alt={message.member.name}
-        className="w-8 h-8 rounded-full bg-[#2A2A2A] shrink-0 mt-1 object-cover"
-      />
+      <div className="shrink-0 pt-1">
+        <img
+          src={message.member.avatarUrl || generateAvatarUrl(message.member.name)}
+          alt={message.member.name}
+          className={cn(
+            'w-8 h-8 rounded-lg object-cover bg-slate-800',
+            isOwn && 'ring-1 ring-[var(--accent)]/30'
+          )}
+        />
+      </div>
 
       {/* Message content */}
-      <div className={cn('max-w-[70%]', isOwn ? 'items-end' : 'items-start')}>
+      <div className="flex-1 min-w-0">
         {/* Name and time */}
-        <div className={cn('flex items-baseline gap-2 mb-1', isOwn ? 'flex-row-reverse' : 'flex-row')}>
-          <span className={cn('text-[13px] font-medium', isOwn ? 'text-[#6E56CF]' : 'text-white')}>
+        <div className="flex items-center gap-2 mb-0.5">
+          <span
+            className={cn('text-xs font-medium', isOwn ? 'text-[var(--accent)]' : 'text-slate-200')}
+          >
             {isOwn ? 'You' : message.member.name}
           </span>
-          <span className="text-[11px] text-[#555]">
-            {formatTime(message.createdAt)}
-          </span>
+          <span className="text-[10px] text-slate-600">{formatTime(message.createdAt)}</span>
         </div>
 
-        {/* Bubble */}
-        <div className="relative">
-          <div
-            className={cn(
-              'text-[14px] leading-relaxed px-4 py-2.5 inline-block border',
-              isOwn
-                ? 'bg-[#6E56CF] text-white border-[#7C66D9] rounded-2xl rounded-tr-none'
-                : 'bg-[#1C1C1E] text-[#DDD] border-[#242426] rounded-2xl rounded-tl-none'
-            )}
-          >
-            {message.imageUrl && (
-              <img
-                src={message.imageUrl}
-                alt="Shared image"
-                className="max-w-xs rounded-lg mb-2 cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => window.open(message.imageUrl!, '_blank')}
+        {/* Message text/content */}
+        <div className="text-[13px] leading-relaxed text-slate-300">
+          {message.imageUrl && (
+            <img
+              src={message.imageUrl}
+              alt="Shared image"
+              className="max-w-xs rounded-lg mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => window.open(message.imageUrl!, '_blank')}
+            />
+          )}
+
+          {message.audioUrl && (
+            <div className="flex items-center gap-3 min-w-[200px] bg-black/20 rounded-lg p-2 mb-2">
+              <audio
+                ref={audioRef}
+                src={message.audioUrl}
+                preload="metadata"
+                onTimeUpdate={handleAudioTimeUpdate}
+                onLoadedMetadata={handleAudioLoadedMetadata}
+                onDurationChange={() => {
+                  if (audioRef.current && isFinite(audioRef.current.duration)) {
+                    setAudioDuration(audioRef.current.duration);
+                  }
+                }}
+                onEnded={handleAudioEnded}
+                className="hidden"
               />
-            )}
-            {message.audioUrl && (
-              <div className="flex items-center gap-3 min-w-[200px]">
-                <audio
-                  ref={audioRef}
-                  src={message.audioUrl}
-                  preload="metadata"
-                  onTimeUpdate={handleAudioTimeUpdate}
-                  onLoadedMetadata={handleAudioLoadedMetadata}
-                  onDurationChange={() => {
-                    if (audioRef.current && isFinite(audioRef.current.duration)) {
-                      setAudioDuration(audioRef.current.duration);
-                    }
-                  }}
-                  onEnded={handleAudioEnded}
-                  className="hidden"
-                />
-                <button
-                  onClick={toggleAudio}
-                  className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-opacity shrink-0',
-                    isOwn ? 'bg-white/20 text-white' : 'bg-[#6E56CF] text-white'
-                  )}
-                >
-                  {isPlaying ? (
-                    <Pause className="w-5 h-5" />
-                  ) : (
-                    <Play className="w-5 h-5 ml-0.5" />
-                  )}
-                </button>
-                <div className="flex-1 min-w-[120px]">
-                  <div className={cn('h-1 rounded-full overflow-hidden', isOwn ? 'bg-white/20' : 'bg-[#2A2A2A]')}>
-                    <div
-                      className={cn('h-full transition-all', isOwn ? 'bg-white' : 'bg-[#6E56CF]')}
-                      style={{ width: audioDuration > 0 ? `${(audioProgress / audioDuration) * 100}%` : '0%' }}
-                    />
-                  </div>
-                  <div className="flex justify-between mt-1">
-                    <span className={cn('text-[10px]', isOwn ? 'text-white/60' : 'text-[#555]')}>
-                      {formatAudioTime(audioProgress)}
-                    </span>
-                    <span className={cn('text-[10px]', isOwn ? 'text-white/60' : 'text-[#555]')}>
-                      {audioDuration > 0 ? formatAudioTime(audioDuration) : '--:--'}
-                    </span>
-                  </div>
+              <button
+                onClick={toggleAudio}
+                className="w-8 h-8 rounded-full bg-[var(--accent)] text-black flex items-center justify-center hover:opacity-90 transition-opacity shrink-0"
+              >
+                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+              </button>
+              <div className="flex-1 min-w-[100px]">
+                <div className="h-1 rounded-full overflow-hidden bg-white/10">
+                  <div
+                    className="h-full bg-[var(--accent)] transition-all"
+                    style={{
+                      width: audioDuration > 0 ? `${(audioProgress / audioDuration) * 100}%` : '0%',
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="text-[10px] text-slate-500">{formatAudioTime(audioProgress)}</span>
+                  <span className="text-[10px] text-slate-500">
+                    {audioDuration > 0 ? formatAudioTime(audioDuration) : '--:--'}
+                  </span>
                 </div>
               </div>
-            )}
-            {message.text && !message.text.startsWith('🎤') && (() => {
+            </div>
+          )}
+
+          {message.text &&
+            !message.text.startsWith('🎤') &&
+            (() => {
               const botCmd = parseBotCommand(message.text);
               if (botCmd.isBot && botCmd.videoId) {
                 return (
@@ -255,88 +255,74 @@ export function MessageBubble({
                   </div>
                 );
               }
-              return <div>{message.text}</div>;
+              return <p>{message.text}</p>;
             })()}
-          </div>
-
-          {/* Action buttons */}
-          <div
-            className={cn(
-              'absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity',
-              isOwn ? '-left-16' : '-right-16'
-            )}
-          >
-            {isOwn && (
-              <button
-                onClick={handleDelete}
-                className="p-1 text-[#555] hover:text-[#EF4444] transition-colors"
-                title="Delete message"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
-            <button
-              onClick={() => setShowReactionPicker(!showReactionPicker)}
-              className="p-1 text-[#555] hover:text-[#DDD] transition-colors"
-              title="Add reaction"
-            >
-              <Smile className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Quick reaction picker */}
-          {showReactionPicker && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowReactionPicker(false)}
-              />
-              <div
-                className={cn(
-                  'absolute top-full mt-1 z-50 bg-[#161618] border border-[#242426] rounded-full px-2 py-1 shadow-xl flex flex-row flex-nowrap gap-1',
-                  isOwn ? 'right-0' : 'left-0'
-                )}
-              >
-                {QUICK_EMOJIS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => {
-                      onReact(message.id, emoji);
-                      setShowReactionPicker(false);
-                    }}
-                    className="w-7 h-7 flex items-center justify-center text-sm hover:bg-[#1C1C1E] rounded-full transition-colors shrink-0"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
         </div>
 
-        {/* Reactions display */}
+        {/* Reactions */}
         {reactionGroups.size > 0 && (
-          <div className={cn('flex flex-wrap gap-1 mt-1', isOwn ? 'justify-end' : 'justify-start')}>
+          <div className="flex flex-wrap gap-1 mt-1.5">
             {Array.from(reactionGroups.entries()).map(([emoji, memberIds]) => (
               <button
                 key={emoji}
                 onClick={() => handleReactionClick(emoji, memberIds)}
                 className={cn(
-                  'flex items-center gap-1 bg-[#1C1C1E] border rounded-full px-2 py-0.5 transition-colors',
+                  'flex items-center gap-1 px-1.5 py-0.5 bg-white/5 border rounded text-[10px] hover:bg-white/10 transition-colors',
                   currentMemberId && memberIds.includes(currentMemberId)
-                    ? 'border-[#6E56CF] bg-[#6E56CF]/10'
-                    : 'border-[#2A2A2A] hover:border-[#444]'
+                    ? 'border-[var(--accent)]/30 bg-[var(--accent)]/10'
+                    : 'border-white/5'
                 )}
               >
-                <span className="text-[12px]">{emoji}</span>
-                <span className="text-[10px] font-medium text-[#888]">
-                  {memberIds.length}
-                </span>
+                <span>{emoji}</span>
+                <span className="text-slate-400">{memberIds.length}</span>
               </button>
             ))}
           </div>
         )}
       </div>
+
+      {/* Hover Actions */}
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-start pt-1">
+        <div className="bg-[#1a1c23] border border-white/10 rounded-lg flex p-1 shadow-xl">
+          <button
+            onClick={() => setShowReactionPicker(!showReactionPicker)}
+            className="p-1 hover:text-[var(--accent)] transition-colors text-slate-500"
+            title="Add reaction"
+          >
+            <Icon icon="solar:emoji-funny-circle-linear" width={16} />
+          </button>
+          {isOwn && (
+            <button
+              onClick={handleDelete}
+              className="p-1 hover:text-[var(--error)] transition-colors text-slate-500"
+              title="Delete"
+            >
+              <Icon icon="solar:trash-bin-2-linear" width={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Quick reaction picker */}
+      {showReactionPicker && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowReactionPicker(false)} />
+          <div className="absolute top-full mt-1 right-0 z-50 bg-[#161618] border border-white/10 rounded-full px-2 py-1 shadow-xl flex flex-row flex-nowrap gap-1">
+            {QUICK_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                onClick={() => {
+                  onReact(message.id, emoji);
+                  setShowReactionPicker(false);
+                }}
+                className="w-7 h-7 flex items-center justify-center text-sm hover:bg-white/10 rounded-full transition-colors shrink-0"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

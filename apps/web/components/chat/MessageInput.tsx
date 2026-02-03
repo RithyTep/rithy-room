@@ -1,7 +1,15 @@
 'use client';
 
-import { useState, useRef, useEffect, type FormEvent, type ChangeEvent, type DragEvent, type ClipboardEvent } from 'react';
-import { ArrowRight, PlusCircle, X, Loader2, Mic, Square, Upload } from 'lucide-react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  type FormEvent,
+  type ChangeEvent,
+  type DragEvent,
+} from 'react';
+import { Icon } from '@iconify/react';
+import { Loader2, X, Mic, Square, Upload } from 'lucide-react';
 import { EmojiPicker } from './EmojiPicker';
 import { GifPicker } from './GifPicker';
 import { cn } from '@/lib/utils';
@@ -9,9 +17,10 @@ import { cn } from '@/lib/utils';
 interface MessageInputProps {
   onSend: (text: string, imageUrl?: string, audioUrl?: string) => void;
   disabled?: boolean;
+  roomSlug?: string;
 }
 
-export function MessageInput({ onSend, disabled }: MessageInputProps) {
+export function MessageInput({ onSend, disabled, roomSlug }: MessageInputProps) {
   const [text, setText] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -36,12 +45,10 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
 
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3001';
 
-    // Use GIF URL directly (no upload needed)
     if (gifUrl) {
       imageUrl = gifUrl;
     }
 
-    // Upload image if exists
     if (imageFile) {
       setIsUploading(true);
       try {
@@ -55,7 +62,6 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
 
         if (response.ok) {
           const data = await response.json();
-          // Cloudinary returns full URL directly
           imageUrl = data.imageUrl;
         } else {
           alert('Failed to upload image.');
@@ -70,7 +76,6 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
       }
     }
 
-    // Upload audio if exists
     if (audioBlob) {
       setIsUploading(true);
       try {
@@ -84,7 +89,6 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
 
         if (response.ok) {
           const data = await response.json();
-          // Cloudinary returns full URL directly
           audioUrl = data.audioUrl;
         } else {
           alert('Failed to upload voice message.');
@@ -142,7 +146,6 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
 
   const handleGifSelect = (url: string) => {
     setGifUrl(url);
-    // Clear other attachments
     setImagePreview(null);
     setImageFile(null);
     setAudioBlob(null);
@@ -152,7 +155,6 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
     setGifUrl(null);
   };
 
-  // Process image file (shared by file input, paste, and drag-drop)
   const processImageFile = (file: File) => {
     if (file && file.type.startsWith('image/')) {
       setImageFile(file);
@@ -166,24 +168,6 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
     }
   };
 
-  // Handle clipboard paste
-  const handlePaste = (e: ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    for (const item of items) {
-      if (item.type.startsWith('image/')) {
-        e.preventDefault();
-        const file = item.getAsFile();
-        if (file) {
-          processImageFile(file);
-        }
-        break;
-      }
-    }
-  };
-
-  // Handle drag events
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -193,7 +177,6 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
   const handleDragLeave = (e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Only set dragging to false if we're leaving the drop zone entirely
     if (e.currentTarget === e.target) {
       setIsDragging(false);
     }
@@ -218,7 +201,6 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
     }
   };
 
-  // Global paste listener
   useEffect(() => {
     const handleGlobalPaste = (e: globalThis.ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -246,7 +228,7 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
+        mimeType: 'audio/webm;codecs=opus',
       });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -260,16 +242,15 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
       mediaRecorder.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         setAudioBlob(blob);
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       };
 
-      // Request data every 100ms to ensure we capture everything
       mediaRecorder.start(100);
       setIsRecording(true);
       setRecordingTime(0);
 
       timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        setRecordingTime((prev) => prev + 1);
       }, 1000);
     } catch (error) {
       console.error('Failed to start recording:', error);
@@ -297,7 +278,7 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
   return (
     <div
       ref={dropZoneRef}
-      className="p-4 md:p-6 pt-2 shrink-0 relative"
+      className="relative max-w-3xl mx-auto"
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -305,8 +286,8 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
     >
       {/* Drag overlay */}
       {isDragging && (
-        <div className="absolute inset-0 bg-[#6E56CF]/20 border-2 border-dashed border-[#6E56CF] rounded-xl flex items-center justify-center z-10 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-2 text-[#6E56CF]">
+        <div className="absolute inset-0 bg-[var(--accent)]/20 border-2 border-dashed border-[var(--accent)] rounded-2xl flex items-center justify-center z-10 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-2 text-[var(--accent)]">
             <Upload className="w-8 h-8" />
             <span className="text-[14px] font-medium">Drop image here</span>
           </div>
@@ -322,139 +303,154 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
         className="hidden"
       />
 
-      {/* Image Preview */}
-      {imagePreview && (
-        <div className="mb-2 relative inline-block">
-          <img
-            src={imagePreview}
-            alt="Preview"
-            className="max-h-32 rounded-lg border border-[#242426]"
-          />
-          <button
-            type="button"
-            onClick={clearImage}
-            className="absolute -top-2 -right-2 p-1 bg-[#EF4444] rounded-full text-white hover:bg-[#DC2626] transition-colors"
-          >
-            <X className="w-3 h-3" />
-          </button>
+      {/* Previews above input */}
+      {(imagePreview || gifUrl || (audioBlob && !isRecording)) && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {/* Image Preview */}
+          {imagePreview && (
+            <div className="relative inline-block">
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="max-h-24 rounded-lg border border-white/10"
+              />
+              <button
+                type="button"
+                onClick={clearImage}
+                className="absolute -top-2 -right-2 p-1 bg-[var(--error)] rounded-full text-white hover:opacity-90 transition-opacity"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
+          {/* GIF Preview */}
+          {gifUrl && (
+            <div className="relative inline-block">
+              <img
+                src={gifUrl}
+                alt="GIF"
+                className="max-h-24 rounded-lg border border-white/10"
+              />
+              <button
+                type="button"
+                onClick={clearGif}
+                className="absolute -top-2 -right-2 p-1 bg-[var(--error)] rounded-full text-white hover:opacity-90 transition-opacity"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+
+          {/* Audio Preview */}
+          {audioBlob && !isRecording && (
+            <div className="flex items-center gap-3 bg-black/20 border border-white/10 rounded-lg p-2">
+              <div className="w-8 h-8 rounded-full bg-[var(--accent)] flex items-center justify-center shrink-0">
+                <Mic className="w-4 h-4 text-black" />
+              </div>
+              <audio
+                src={URL.createObjectURL(audioBlob)}
+                controls
+                className="h-8 max-w-[200px]"
+              />
+              <button
+                type="button"
+                onClick={clearAudio}
+                className="p-1.5 text-[var(--error)] hover:bg-[var(--error)]/10 rounded transition-colors shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* GIF Preview */}
-      {gifUrl && (
-        <div className="mb-2 relative inline-block">
-          <img
-            src={gifUrl}
-            alt="GIF"
-            className="max-h-32 rounded-lg border border-[#242426]"
-          />
-          <button
-            type="button"
-            onClick={clearGif}
-            className="absolute -top-2 -right-2 p-1 bg-[#EF4444] rounded-full text-white hover:bg-[#DC2626] transition-colors"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-      )}
+      {/* Input wrapper with glow effect */}
+      <div className="relative group">
+        {/* Glow effect */}
+        <div className="absolute -inset-px bg-gradient-to-r from-[var(--accent)]/20 via-transparent to-[var(--accent)]/20 rounded-2xl blur opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition duration-700" />
 
-      {/* Audio Preview */}
-      {audioBlob && !isRecording && (
-        <div className="mb-2 flex items-center gap-3 bg-[#1C1C1E] border border-[#242426] rounded-lg p-3 inline-flex">
-          <div className="w-8 h-8 rounded-full bg-[#6E56CF] flex items-center justify-center shrink-0">
-            <Mic className="w-4 h-4 text-white" />
-          </div>
-          <audio
-            src={URL.createObjectURL(audioBlob)}
-            controls
-            className="h-8 max-w-[200px]"
-          />
-          <button
-            type="button"
-            onClick={clearAudio}
-            className="p-1.5 text-[#EF4444] hover:bg-[#EF4444]/10 rounded transition-colors shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      <form
-        onSubmit={handleSubmit}
-        className="bg-[#161618] border border-[#242426] rounded-xl flex items-center p-1.5 focus-within:border-[#444] transition-colors shadow-sm"
-      >
-        <button
-          type="button"
-          onClick={handleUploadClick}
-          disabled={isUploading || isRecording}
-          className="p-2 text-[#555] hover:text-[#DDD] rounded-lg transition-colors disabled:opacity-50"
+        <form
+          onSubmit={handleSubmit}
+          className="relative flex items-center gap-2 glass-panel !bg-black/40 rounded-2xl p-2 pl-4 transition-all focus-within:ring-1 focus-within:ring-[var(--accent)]/30"
         >
-          <PlusCircle className="w-5 h-5" />
-        </button>
+          <button
+            type="button"
+            onClick={handleUploadClick}
+            disabled={isUploading || isRecording}
+            className="text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-50"
+          >
+            <Icon icon="solar:add-circle-linear" width={20} />
+          </button>
 
-        {isRecording ? (
-          <div className="flex-1 flex items-center gap-3 px-2">
-            <div className="w-2 h-2 rounded-full bg-[#EF4444] animate-pulse" />
-            <span className="text-[14px] text-[#EF4444]">Recording {formatTime(recordingTime)}</span>
-          </div>
-        ) : (
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={imageFile ? 'Add a caption...' : audioBlob ? 'Add a caption...' : 'Type a message...'}
-            disabled={disabled || isUploading}
-            className="flex-1 bg-transparent border-none text-[14px] text-[#EDEDED] placeholder-[#444] px-2 focus:outline-none h-full"
-          />
-        )}
-
-        <div className="flex items-center gap-1 pr-1">
-          {!isRecording && !audioBlob && !gifUrl && (
-            <>
-              <GifPicker onSelect={handleGifSelect} />
-              <EmojiPicker onSelect={handleEmojiSelect} />
-            </>
-          )}
-
-          {/* Voice record button */}
-          {!text.trim() && !imageFile && !audioBlob && !gifUrl ? (
-            <button
-              type="button"
-              onMouseDown={startRecording}
-              onMouseUp={stopRecording}
-              onMouseLeave={isRecording ? stopRecording : undefined}
-              onTouchStart={startRecording}
-              onTouchEnd={stopRecording}
-              disabled={disabled || isUploading}
-              className={cn(
-                'p-2 rounded-lg transition-colors',
-                isRecording
-                  ? 'bg-[#EF4444] text-white'
-                  : 'bg-[#2A2A2A] text-[#888] hover:text-white'
-              )}
-              title="Hold to record voice message"
-            >
-              {isRecording ? (
-                <Square className="w-[18px] h-[18px]" />
-              ) : (
-                <Mic className="w-[18px] h-[18px]" />
-              )}
-            </button>
+          {isRecording ? (
+            <div className="flex-1 flex items-center gap-3 px-2">
+              <div className="w-2 h-2 rounded-full bg-[var(--error)] animate-pulse" />
+              <span className="text-[14px] text-[var(--error)]">
+                Recording {formatTime(recordingTime)}
+              </span>
+            </div>
           ) : (
-            <button
-              type="submit"
-              disabled={(!text.trim() && !imageFile && !audioBlob && !gifUrl) || disabled || isUploading}
-              className="p-2 bg-[#EDEDED] text-black rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isUploading ? (
-                <Loader2 className="w-[18px] h-[18px] animate-spin" />
-              ) : (
-                <ArrowRight className="w-[18px] h-[18px]" />
-              )}
-            </button>
+            <input
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={`Message ${roomSlug ? `#${roomSlug}` : ''}...`}
+              disabled={disabled || isUploading}
+              className="flex-1 bg-transparent border-none text-sm text-slate-200 placeholder-slate-600 focus:outline-none py-2"
+            />
           )}
-        </div>
-      </form>
+
+          <div className="flex items-center gap-1 pr-1">
+            {!isRecording && !audioBlob && !gifUrl && (
+              <>
+                <GifPicker onSelect={handleGifSelect} />
+                <EmojiPicker onSelect={handleEmojiSelect} />
+              </>
+            )}
+
+            {/* Voice record or Send button */}
+            {!text.trim() && !imageFile && !audioBlob && !gifUrl ? (
+              <button
+                type="button"
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+                onMouseLeave={isRecording ? stopRecording : undefined}
+                onTouchStart={startRecording}
+                onTouchEnd={stopRecording}
+                disabled={disabled || isUploading}
+                className={cn(
+                  'p-1.5 rounded-lg transition-colors',
+                  isRecording
+                    ? 'bg-[var(--error)] text-white'
+                    : 'text-slate-500 hover:text-[var(--accent)] hover:bg-white/5'
+                )}
+                title="Hold to record voice message"
+              >
+                {isRecording ? (
+                  <Square className="w-[18px] h-[18px]" />
+                ) : (
+                  <Icon icon="solar:microphone-2-linear" width={18} />
+                )}
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={
+                  (!text.trim() && !imageFile && !audioBlob && !gifUrl) || disabled || isUploading
+                }
+                className="p-1.5 bg-white/10 text-white rounded-lg hover:bg-[var(--accent)] hover:text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUploading ? (
+                  <Loader2 className="w-[18px] h-[18px] animate-spin" />
+                ) : (
+                  <Icon icon="solar:arrow-right-linear" width={18} />
+                )}
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
