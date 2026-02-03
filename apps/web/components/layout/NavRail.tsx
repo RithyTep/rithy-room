@@ -7,12 +7,14 @@ interface NavRailProps {
   userAvatarUrl?: string;
   userName?: string;
   onUserClick?: () => void;
+  onGamesClick?: () => void;
 }
 
 export function NavRail({
   userAvatarUrl,
   userName,
   onUserClick,
+  onGamesClick,
 }: NavRailProps) {
   return (
     <nav className="hidden md:flex glass-panel w-[72px] rounded-2xl flex-col items-center py-6 gap-6 shrink-0 z-20">
@@ -24,8 +26,9 @@ export function NavRail({
       {/* Separator */}
       <div className="w-8 h-px bg-white/5" />
 
-      {/* Chat - Active */}
+      {/* Navigation Items */}
       <div className="flex flex-col gap-4 w-full px-3">
+        {/* Chat - Active */}
         <div className="group relative">
           <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-1 h-5 bg-[var(--accent)] rounded-r-full shadow-[0_0_10px_var(--accent)]" />
           <button
@@ -35,6 +38,15 @@ export function NavRail({
             <Icon icon="solar:chat-round-line-linear" width={22} />
           </button>
         </div>
+
+        {/* Games */}
+        <button
+          onClick={onGamesClick}
+          className="w-full aspect-square rounded-xl flex items-center justify-center transition-all bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 border border-transparent"
+          title="Games"
+        >
+          <Icon icon="solar:gamepad-linear" width={22} />
+        </button>
       </div>
 
       {/* Bottom User Avatar */}

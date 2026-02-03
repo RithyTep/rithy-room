@@ -12,8 +12,12 @@ import { ChatPanel } from '@/components/layout/ChatPanel';
 import { UsersPanel } from '@/components/layout/UsersPanel';
 import { CallView } from '@/components/video/CallView';
 import { SettingsModal } from '@/components/ui/SettingsModal';
+import { GameBrowser } from '@/components/games/GameBrowser';
+import { GamePlayer } from '@/components/games/GamePlayer';
+import { GameNotification } from '@/components/games/GameNotification';
 import { getSession, saveSession } from '@/lib/session';
 import { generateAvatarUrl } from '@/lib/utils';
+import type { GameItem } from '@rithy-room/shared';
 
 interface RoomPageProps {
   params: Promise<{ slug: string }>;
@@ -21,13 +25,15 @@ interface RoomPageProps {
 
 export default function RoomPage({ params }: RoomPageProps) {
   const { slug } = use(params);
-  const { joinRoom, updateProfile } = useSocket();
-  const { room, isConnected, isJoining, error, members, currentMemberId, reset } = useRoomStore();
+  const { joinRoom, updateProfile, startGame, endGame } = useSocket();
+  const { room, isConnected, isJoining, error, members, currentMemberId, reset, activeGame, gameNotification, setGameNotification, setActiveGame } = useRoomStore();
   const { viewMode } = useMediaStore();
 
   const [hasSession, setHasSession] = useState<boolean | null>(null);
   const [showUserPanel, setShowUserPanel] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGameBrowser, setShowGameBrowser] = useState(false);
+  const [isPlayingGame, setIsPlayingGame] = useState(false);
   const joinAttempted = useRef(false);
 
   const currentMember = members.find((m) => m.id === currentMemberId);
@@ -66,6 +72,26 @@ export default function RoomPage({ params }: RoomPageProps) {
   const handleLeaveRoom = () => {
     reset();
     window.location.href = '/';
+  };
+
+  const handleSelectGame = (game: GameItem) => {
+    startGame(game.id);
+    setShowGameBrowser(false);
+    setIsPlayingGame(true);
+  };
+
+  const handleCloseGame = () => {
+    endGame();
+    setIsPlayingGame(false);
+  };
+
+  const handleJoinGame = () => {
+    setGameNotification(null);
+    setIsPlayingGame(true);
+  };
+
+  const handleDismissNotification = () => {
+    setGameNotification(null);
   };
 
   // Show minimal loading when auto-rejoining
@@ -107,9 +133,37 @@ export default function RoomPage({ params }: RoomPageProps) {
     return <CallView />;
   }
 
+  // Show game player if playing
+  if (isPlayingGame && activeGame) {
+    return (
+      <GamePlayer
+        game={activeGame.game}
+        onClose={handleCloseGame}
+      />
+    );
+  }
+
   // Main chat view
   return (
     <>
+      {/* Game Browser Modal */}
+      {showGameBrowser && (
+        <GameBrowser
+          onSelectGame={handleSelectGame}
+          onClose={() => setShowGameBrowser(false)}
+        />
+      )}
+
+      {/* Game Notification */}
+      {gameNotification && (
+        <GameNotification
+          game={gameNotification.game}
+          startedByName={gameNotification.startedByName}
+          onJoin={handleJoinGame}
+          onDismiss={handleDismissNotification}
+        />
+      )}
+
       <SettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
@@ -140,6 +194,7 @@ export default function RoomPage({ params }: RoomPageProps) {
               userAvatarUrl={currentMember?.avatarUrl || generateAvatarUrl(currentMember?.name || '')}
               userName={currentMember?.name}
               onUserClick={() => setShowSettings(true)}
+              onGamesClick={() => setShowGameBrowser(true)}
             />
 
             {/* Chat Panel */}
@@ -174,6 +229,13 @@ export default function RoomPage({ params }: RoomPageProps) {
           <button className="flex flex-col items-center gap-1 text-[var(--accent)]">
             <Icon icon="solar:chat-round-line-linear" width={22} />
             <span className="text-[10px]">Chat</span>
+          </button>
+          <button
+            onClick={() => setShowGameBrowser(true)}
+            className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <Icon icon="solar:gamepad-linear" width={22} />
+            <span className="text-[10px]">Games</span>
           </button>
           <button className="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 transition-colors">
             <Icon icon="solar:phone-linear" width={22} />

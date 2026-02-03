@@ -66,6 +66,9 @@ export interface ServerToClientEvents {
   'user-left-call': (data: { memberId: string }) => void;
   'call-participants': (data: { participants: string[] }) => void;
   'music-update': (data: MusicState) => void;
+  'game-started': (data: { game: GameItem; startedBy: string; startedByName: string }) => void;
+  'game-ended': () => void;
+  'game-state': (data: { game: GameItem; startedBy: string; startedByName: string } | null) => void;
   error: (data: { message: string }) => void;
 }
 
@@ -90,6 +93,8 @@ export interface ClientToServerEvents {
   'leave-call': () => void;
   'webrtc-signal': (data: { to: string; signal: RTCSignalData }) => void;
   'music-sync': (data: MusicState) => void;
+  'start-game': (data: { gameId: string }) => void;
+  'end-game': () => void;
 }
 
 export interface RTCSignalData {
@@ -109,4 +114,23 @@ export interface MusicState {
 export interface CallParticipant {
   memberId: string;
   socketId: string;
+}
+
+// Game types
+export interface GameItem {
+  id: string;
+  name: string;
+  description: string;
+  thumbnail: string;
+  url: string;
+  maxPlayers: string;
+  category: 'action' | 'racing' | 'puzzle' | 'sports' | 'io';
+  tags: string[];
+}
+
+export interface GameSession {
+  gameId: string;
+  game: GameItem;
+  startedBy: string;
+  startedAt: Date;
 }

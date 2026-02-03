@@ -1,5 +1,11 @@
 import { create } from 'zustand';
-import type { Room, Member, Message, MusicState } from '@rithy-room/shared';
+import type { Room, Member, Message, MusicState, GameItem } from '@rithy-room/shared';
+
+export interface ActiveGameState {
+  game: GameItem;
+  startedBy: string;
+  startedByName: string;
+}
 
 interface RoomState {
   room: Room | null;
@@ -7,6 +13,8 @@ interface RoomState {
   messages: Message[];
   currentMemberId: string | null;
   musicState: MusicState | null;
+  activeGame: ActiveGameState | null;
+  gameNotification: ActiveGameState | null;
   isConnected: boolean;
   isJoining: boolean;
   error: string | null;
@@ -24,6 +32,8 @@ interface RoomState {
   deleteMessage: (messageId: string) => void;
   setCurrentMemberId: (memberId: string) => void;
   setMusicState: (state: MusicState | null) => void;
+  setActiveGame: (game: ActiveGameState | null) => void;
+  setGameNotification: (game: ActiveGameState | null) => void;
   setConnected: (connected: boolean) => void;
   setJoining: (joining: boolean) => void;
   setError: (error: string | null) => void;
@@ -36,6 +46,8 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   messages: [],
   currentMemberId: null,
   musicState: null,
+  activeGame: null,
+  gameNotification: null,
   isConnected: false,
   isJoining: false,
   error: null,
@@ -131,6 +143,10 @@ export const useRoomStore = create<RoomState>((set, get) => ({
 
   setMusicState: (musicState) => set({ musicState }),
 
+  setActiveGame: (activeGame) => set({ activeGame }),
+
+  setGameNotification: (gameNotification) => set({ gameNotification }),
+
   setConnected: (isConnected) => set({ isConnected }),
 
   setJoining: (isJoining) => set({ isJoining }),
@@ -144,6 +160,8 @@ export const useRoomStore = create<RoomState>((set, get) => ({
       messages: [],
       currentMemberId: null,
       musicState: null,
+      activeGame: null,
+      gameNotification: null,
       isConnected: false,
       isJoining: false,
       error: null,

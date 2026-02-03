@@ -19,9 +19,12 @@ export function useSocket() {
     removeReaction,
     deleteMessage,
     setMusicState,
+    setActiveGame,
+    setGameNotification,
     setConnected,
     setJoining,
     setError,
+    currentMemberId,
   } = useRoomStore();
   const { addCallParticipant, addParticipantToCall, removeCallParticipant } = useMediaStore();
 
@@ -104,6 +107,29 @@ export function useSocket() {
       setMusicState(state);
     });
 
+    socket.on('game-started', ({ game, startedBy, startedByName }) => {
+      const gameState = { game, startedBy, startedByName };
+      setActiveGame(gameState);
+      // Show notification to others (not the one who started)
+      const { currentMemberId } = useRoomStore.getState();
+      if (startedBy !== currentMemberId) {
+        setGameNotification(gameState);
+        // Auto-hide notification after 10 seconds
+        setTimeout(() => {
+          setGameNotification(null);
+        }, 10000);
+      }
+    });
+
+    socket.on('game-ended', () => {
+      setActiveGame(null);
+      setGameNotification(null);
+    });
+
+    socket.on('game-state', (state) => {
+      setActiveGame(state);
+    });
+
     socket.on('error', ({ message }) => {
       setError(message);
     });
@@ -179,6 +205,16 @@ export function useSocket() {
     });
   }, []);
 
+  const startGame = useCallback((gameId: string) => {
+    const socket = getSocket();
+    socket.emit('start-game', { gameId });
+  }, []);
+
+  const endGame = useCallback(() => {
+    const socket = getSocket();
+    socket.emit('end-game');
+  }, []);
+
   return {
     socket: getSocket(),
     joinRoom,
@@ -190,5 +226,7 @@ export function useSocket() {
     leaveCall,
     syncMusic,
     updateProfile,
+    startGame,
+    endGame,
   };
 }
