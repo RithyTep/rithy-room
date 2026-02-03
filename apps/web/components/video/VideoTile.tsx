@@ -39,23 +39,35 @@ export function VideoTile({
     }
 
     const updateTrackCount = () => {
-      setVideoTrackCount(stream.getVideoTracks().length);
+      const count = stream.getVideoTracks().length;
+      setVideoTrackCount(count);
     };
 
     updateTrackCount();
     stream.addEventListener('addtrack', updateTrackCount);
     stream.addEventListener('removetrack', updateTrackCount);
 
+    // Poll for track changes as fallback (WebRTC remote streams may not fire addtrack)
+    const pollInterval = setInterval(updateTrackCount, 500);
+
     return () => {
       stream.removeEventListener('addtrack', updateTrackCount);
       stream.removeEventListener('removetrack', updateTrackCount);
+      clearInterval(pollInterval);
     };
   }, [stream]);
 
   // Handle video element - re-run when camera state or track count changes
   useEffect(() => {
     if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+      // Force video element to reload by clearing first
+      if (videoRef.current.srcObject !== stream) {
+        videoRef.current.srcObject = stream;
+      } else if (videoTrackCount > 0) {
+        // Same stream but tracks changed - force reload
+        videoRef.current.srcObject = null;
+        videoRef.current.srcObject = stream;
+      }
       // Apply volume for remote streams
       if (!isSelf) {
         videoRef.current.volume = volume / 100;
