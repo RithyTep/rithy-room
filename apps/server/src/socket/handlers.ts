@@ -265,6 +265,16 @@ export function setupSocketHandlers(io: TypedServer) {
         roomCalls.set(memberInfo.roomSlug, participants);
       }
 
+      // Get existing participants before adding the new one
+      const existingParticipants = Array.from(participants)
+        .filter((p) => p.socketId !== socket.id)
+        .map((p) => p.memberId);
+
+      // Send existing participants to the joining user
+      if (existingParticipants.length > 0) {
+        socket.emit('call-participants', { participants: existingParticipants });
+      }
+
       participants.add({
         memberId: memberInfo.memberId,
         socketId: socket.id,

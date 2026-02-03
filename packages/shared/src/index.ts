@@ -64,6 +64,7 @@ export interface ServerToClientEvents {
   }) => void;
   'user-joined-call': (data: { memberId: string }) => void;
   'user-left-call': (data: { memberId: string }) => void;
+  'call-participants': (data: { participants: string[] }) => void;
   'music-update': (data: MusicState) => void;
   error: (data: { message: string }) => void;
 }

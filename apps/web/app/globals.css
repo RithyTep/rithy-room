@@ -73,3 +73,15 @@ input[type='range']::-webkit-slider-runnable-track {
   background-color: #6E56CF;
   color: white;
 }
+
+/* Safe area for mobile devices (iPhone notch, etc.) */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Ensure viewport accounts for safe areas */
+@supports (padding: max(0px)) {
+  .safe-area-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+}

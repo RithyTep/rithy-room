@@ -16,7 +16,11 @@ function formatDuration(seconds: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-export function VideoGrid() {
+interface VideoGridProps {
+  isMobile?: boolean;
+}
+
+export function VideoGrid({ isMobile }: VideoGridProps) {
   const { members, currentMemberId } = useRoomStore();
   const { localStream, screenStream, remoteStreams, isInCall, isMuted, isCameraOff, isScreenSharing, volume } =
     useMediaStore();
@@ -52,7 +56,13 @@ export function VideoGrid() {
 
   if (!isInCall) {
     return (
-      <aside className="hidden md:flex w-80 bg-[#161618] border-l border-[#242426] flex-col shrink-0 items-center justify-center">
+      <aside
+        className={
+          isMobile
+            ? 'flex flex-col h-full bg-[#161618] items-center justify-center'
+            : 'hidden md:flex w-80 bg-[#161618] border-l border-[#242426] flex-col shrink-0 items-center justify-center'
+        }
+      >
         <div className="text-center p-8">
           <div className="w-16 h-16 rounded-full bg-[#1C1C1E] flex items-center justify-center mx-auto mb-4">
             <Phone className="w-8 h-8 text-[#555]" />
@@ -65,7 +75,7 @@ export function VideoGrid() {
           </p>
           <button
             onClick={startCall}
-            className="bg-[#6E56CF] hover:opacity-90 text-white font-medium px-6 py-2.5 rounded-lg transition-opacity"
+            className="bg-[#6E56CF] hover:opacity-90 active:opacity-80 text-white font-medium px-6 py-2.5 rounded-lg transition-opacity min-h-[44px]"
           >
             Join Call
           </button>
@@ -75,7 +85,13 @@ export function VideoGrid() {
   }
 
   return (
-    <aside className="hidden md:flex w-80 bg-[#161618] border-l border-[#242426] flex-col shrink-0">
+    <aside
+      className={
+        isMobile
+          ? 'flex flex-col h-full bg-[#161618]'
+          : 'hidden md:flex w-80 bg-[#161618] border-l border-[#242426] flex-col shrink-0'
+      }
+    >
       {/* Call Status */}
       <div className="p-4 border-b border-[#242426] flex items-center justify-between">
         <div>
@@ -84,22 +100,30 @@ export function VideoGrid() {
         </div>
         <button
           onClick={endCall}
-          className="text-[#EF4444] hover:bg-[#EF4444]/10 p-2 rounded-lg transition-colors"
+          className="text-[#EF4444] hover:bg-[#EF4444]/10 active:bg-[#EF4444]/20 p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
         >
           <PhoneOff className="w-5 h-5" />
         </button>
       </div>
 
       {/* Video Grid */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div
+        className={
+          isMobile
+            ? 'flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-2 auto-rows-min'
+            : 'flex-1 overflow-y-auto p-4 space-y-3'
+        }
+      >
         {/* Screen share preview */}
         {screenStream && (
-          <VideoTile
-            stream={screenStream}
-            name="Screen Share"
-            isScreenShare
-            isSelf
-          />
+          <div className={isMobile ? 'col-span-2' : ''}>
+            <VideoTile
+              stream={screenStream}
+              name="Screen Share"
+              isScreenShare
+              isSelf
+            />
+          </div>
         )}
 
         {/* Local video */}
@@ -142,6 +166,7 @@ export function VideoGrid() {
         onToggleScreenShare={toggleScreenShare}
         onVolumeChange={changeVolume}
         onLeave={endCall}
+        isMobile={isMobile}
       />
     </aside>
   );

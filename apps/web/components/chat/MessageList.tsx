@@ -24,7 +24,11 @@ function extractBotCommand(text: string): { isBot: boolean; youtubeUrl?: string 
   return { isBot: true };
 }
 
-export function MessageList() {
+interface MessageListProps {
+  isMobile?: boolean;
+}
+
+export function MessageList({ isMobile }: MessageListProps) {
   const { messages, musicState } = useRoomStore();
   const { sendMessage, reactToMessage, removeReactionFromMessage, deleteMessage, syncMusic } = useSocket();
   const scrollRef = useRef<HTMLDivElement>(null);

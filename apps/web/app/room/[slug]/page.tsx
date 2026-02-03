@@ -7,6 +7,7 @@ import { useRoomStore } from '@/stores/room';
 import { MemberList } from '@/components/members/MemberList';
 import { MessageList } from '@/components/chat/MessageList';
 import { VideoGrid } from '@/components/video/VideoGrid';
+import { MobileNav, type MobileView } from '@/components/mobile/MobileNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getSession, saveSession } from '@/lib/session';
@@ -24,6 +25,7 @@ export default function RoomPage({ params }: RoomPageProps) {
   const [micEnabled, setMicEnabled] = useState(true);
   const [camEnabled, setCamEnabled] = useState(true);
   const [hasSession, setHasSession] = useState<boolean | null>(null);
+  const [mobileView, setMobileView] = useState<MobileView>('chat');
   const joinAttempted = useRef(false);
 
   // Check for saved session on mount
@@ -158,9 +160,22 @@ export default function RoomPage({ params }: RoomPageProps) {
         </span>
       </div>
 
-      <MemberList />
-      <MessageList />
-      <VideoGrid />
+      {/* Desktop Layout - always show all panels */}
+      <div className="hidden md:contents">
+        <MemberList />
+        <MessageList />
+        <VideoGrid />
+      </div>
+
+      {/* Mobile Layout - show based on active tab */}
+      <div className="md:hidden flex-1 overflow-hidden pb-14">
+        {mobileView === 'chat' && <MessageList isMobile />}
+        {mobileView === 'members' && <MemberList isMobile />}
+        {mobileView === 'call' && <VideoGrid isMobile />}
+      </div>
+
+      {/* Mobile Navigation */}
+      <MobileNav activeView={mobileView} onViewChange={setMobileView} />
     </div>
   );
 }

@@ -93,6 +93,13 @@ export function useSocket() {
       removeCallParticipant(memberId);
     });
 
+    socket.on('call-participants', ({ participants }) => {
+      // Add all existing participants when joining a call
+      participants.forEach((memberId) => {
+        addCallParticipant(memberId);
+      });
+    });
+
     socket.on('music-update', (state) => {
       setMusicState(state);
     });

@@ -10,7 +10,11 @@ import { SettingsModal } from '@/components/ui/SettingsModal';
 import { generateAvatarUrl } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
-export function MemberList() {
+interface MemberListProps {
+  isMobile?: boolean;
+}
+
+export function MemberList({ isMobile }: MemberListProps) {
   const { room, members, currentMemberId, reset } = useRoomStore();
   const { isMuted, isDeafened, setMuted, setDeafened, localStream } = useMediaStore();
   const { updateProfile } = useSocket();
@@ -62,7 +66,13 @@ export function MemberList() {
         onProfileUpdate={handleProfileUpdate}
         onLeaveRoom={handleLeaveRoom}
       />
-      <aside className="hidden md:flex w-64 bg-[#161618] border-r border-[#242426] flex-col shrink-0">
+      <aside
+        className={
+          isMobile
+            ? 'flex flex-col h-full bg-[#161618]'
+            : 'hidden md:flex w-64 bg-[#161618] border-r border-[#242426] flex-col shrink-0'
+        }
+      >
         {/* Room Header */}
         <div className="h-14 flex items-center px-5 border-b border-[#242426]">
           <div className="w-2 h-2 rounded-full bg-[#6E56CF] mr-3" />
