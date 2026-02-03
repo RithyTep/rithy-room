@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Monitor } from 'lucide-react';
 import { cn, generateAvatarUrl } from '@/lib/utils';
 
@@ -29,19 +29,41 @@ export function VideoTile({
 }: VideoTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [videoTrackCount, setVideoTrackCount] = useState(0);
 
-  // Handle video element
+  // Track when video tracks are added/removed to force re-render
+  useEffect(() => {
+    if (!stream) {
+      setVideoTrackCount(0);
+      return;
+    }
+
+    const updateTrackCount = () => {
+      setVideoTrackCount(stream.getVideoTracks().length);
+    };
+
+    updateTrackCount();
+    stream.addEventListener('addtrack', updateTrackCount);
+    stream.addEventListener('removetrack', updateTrackCount);
+
+    return () => {
+      stream.removeEventListener('addtrack', updateTrackCount);
+      stream.removeEventListener('removetrack', updateTrackCount);
+    };
+  }, [stream]);
+
+  // Handle video element - re-run when camera state or track count changes
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
-      // Apply volume for remote streams (video element handles both audio and video when visible)
-      if (!isSelf && videoRef.current) {
+      // Apply volume for remote streams
+      if (!isSelf) {
         videoRef.current.volume = volume / 100;
       }
     }
-  }, [stream, volume, isSelf]);
+  }, [stream, volume, isSelf, isCameraOff, videoTrackCount]);
 
-  // Handle separate audio element for remote streams when video is not visible
+  // Handle separate audio element for remote streams
   useEffect(() => {
     if (audioRef.current && stream && !isSelf) {
       audioRef.current.srcObject = stream;
