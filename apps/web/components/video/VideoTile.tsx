@@ -28,14 +28,24 @@ export function VideoTile({
   volume = 100,
 }: VideoTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Handle video element
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
-      // Apply volume for remote streams
+      // Apply volume for remote streams (video element handles both audio and video when visible)
       if (!isSelf && videoRef.current) {
         videoRef.current.volume = volume / 100;
       }
+    }
+  }, [stream, volume, isSelf]);
+
+  // Handle separate audio element for remote streams when video is not visible
+  useEffect(() => {
+    if (audioRef.current && stream && !isSelf) {
+      audioRef.current.srcObject = stream;
+      audioRef.current.volume = volume / 100;
     }
   }, [stream, volume, isSelf]);
 
@@ -53,6 +63,11 @@ export function VideoTile({
             : 'border border-[#242426]'
       )}
     >
+      {/* Hidden audio element for remote streams - ensures audio plays even when video is hidden */}
+      {stream && !isSelf && !hasVideo && (
+        <audio ref={audioRef} autoPlay playsInline />
+      )}
+
       {stream && hasVideo ? (
         <>
           <video
