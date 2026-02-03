@@ -49,24 +49,39 @@ export function useWebRTC(socket: TypedSocket) {
   }, [socket.connected, addRemoteStream, removeRemoteStream]);
 
   const startCall = useCallback(async () => {
+    console.log('Starting call...');
+
     if (!managerRef.current) {
       managerRef.current = new WebRTCManager(
         getSocket(),
-        (memberId, stream) => addRemoteStream(memberId, stream),
-        (memberId) => removeRemoteStream(memberId)
+        (memberId, stream) => {
+          console.log('Received remote stream from:', memberId);
+          addRemoteStream(memberId, stream);
+        },
+        (memberId) => {
+          console.log('Remote disconnected:', memberId);
+          removeRemoteStream(memberId);
+        }
       );
     }
 
     try {
       // Start with audio only (no camera)
+      console.log('Requesting microphone access...');
       const stream = await managerRef.current.getUserMedia();
+      console.log('Got local stream with tracks:', stream.getTracks().map(t => t.kind));
+
       setLocalStream(stream);
       setInCall(true);
       setCameraOff(true); // Camera is off by default
       setMuted(false);
+
+      console.log('Emitting join-call...');
       getSocket().emit('join-call');
     } catch (error) {
       console.error('Failed to get user media:', error);
+      // On mobile, show a more helpful error
+      alert('Could not access microphone. Please allow microphone access and try again.');
     }
   }, [setLocalStream, setInCall, setCameraOff, setMuted, addRemoteStream, removeRemoteStream]);
 
@@ -133,7 +148,7 @@ export function useWebRTC(socket: TypedSocket) {
     } else {
       // Turn camera OFF (stops the camera, turns off Mac camera light)
       if (managerRef.current) {
-        managerRef.current.disableCamera();
+        await managerRef.current.disableCamera();
         setCameraOff(true);
         // Update local stream reference
         const stream = managerRef.current.getLocalStream();
@@ -148,7 +163,10 @@ export function useWebRTC(socket: TypedSocket) {
     const { isScreenSharing, screenStream } = useMediaStore.getState();
 
     if (isScreenSharing && screenStream) {
-      // Stop screen sharing
+      // Stop screen sharing - remove from peers first
+      if (managerRef.current) {
+        await managerRef.current.removeScreenShare(screenStream);
+      }
       screenStream.getTracks().forEach((track) => track.stop());
       setScreenStream(null);
       setScreenSharing(false);
@@ -161,10 +179,18 @@ export function useWebRTC(socket: TypedSocket) {
         });
 
         // Handle when user clicks "Stop sharing" in browser UI
-        stream.getVideoTracks()[0].onended = () => {
+        stream.getVideoTracks()[0].onended = async () => {
+          if (managerRef.current) {
+            await managerRef.current.removeScreenShare(stream);
+          }
           setScreenStream(null);
           setScreenSharing(false);
         };
+
+        // Add screen share to all peers
+        if (managerRef.current) {
+          await managerRef.current.addScreenShare(stream);
+        }
 
         setScreenStream(stream);
         setScreenSharing(true);

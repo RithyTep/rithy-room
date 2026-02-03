@@ -43,7 +43,7 @@ export class WebRTCManager {
     return this.localStream;
   }
 
-  // Enable camera - adds video track
+  // Enable camera - adds video track and renegotiates with peers
   async enableCamera(): Promise<MediaStream | null> {
     if (!this.localStream) return null;
 
@@ -56,10 +56,11 @@ export class WebRTCManager {
       const videoTrack = videoStream.getVideoTracks()[0];
       this.localStream.addTrack(videoTrack);
 
-      // Add video track to all peer connections
-      this.peerConnections.forEach((pc) => {
+      // Add video track to all peer connections and renegotiate
+      for (const [memberId, pc] of this.peerConnections) {
         pc.addTrack(videoTrack, this.localStream!);
-      });
+        await this.renegotiate(memberId, pc);
+      }
 
       return this.localStream;
     } catch (error) {
@@ -69,25 +70,70 @@ export class WebRTCManager {
   }
 
   // Disable camera - removes and stops video track
-  disableCamera(): void {
+  async disableCamera(): Promise<void> {
     if (!this.localStream) return;
 
     const videoTracks = this.localStream.getVideoTracks();
-    videoTracks.forEach((track) => {
+    for (const track of videoTracks) {
       // Stop the track (turns off camera light)
       track.stop();
       // Remove from local stream
       this.localStream!.removeTrack(track);
 
       // Remove from all peer connections
-      this.peerConnections.forEach((pc) => {
+      for (const [memberId, pc] of this.peerConnections) {
         const senders = pc.getSenders();
         const videoSender = senders.find((s) => s.track === track);
         if (videoSender) {
           pc.removeTrack(videoSender);
+          await this.renegotiate(memberId, pc);
         }
+      }
+    }
+  }
+
+  // Renegotiate connection after adding/removing tracks
+  private async renegotiate(memberId: string, pc: RTCPeerConnection): Promise<void> {
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      this.socket.emit('webrtc-signal', {
+        to: memberId,
+        signal: {
+          type: 'offer',
+          sdp: offer.sdp,
+        },
       });
-    });
+    } catch (error) {
+      console.error('Renegotiation failed:', error);
+    }
+  }
+
+  // Add screen share tracks to all peers
+  async addScreenShare(screenStream: MediaStream): Promise<void> {
+    const videoTrack = screenStream.getVideoTracks()[0];
+    if (!videoTrack) return;
+
+    for (const [memberId, pc] of this.peerConnections) {
+      pc.addTrack(videoTrack, screenStream);
+      await this.renegotiate(memberId, pc);
+    }
+  }
+
+  // Remove screen share tracks from all peers
+  async removeScreenShare(screenStream: MediaStream): Promise<void> {
+    const videoTrack = screenStream.getVideoTracks()[0];
+    if (!videoTrack) return;
+
+    for (const [memberId, pc] of this.peerConnections) {
+      const senders = pc.getSenders();
+      const screenSender = senders.find((s) => s.track === videoTrack);
+      if (screenSender) {
+        pc.removeTrack(screenSender);
+        await this.renegotiate(memberId, pc);
+      }
+    }
   }
 
   // Toggle mute - enables/disables audio track without stopping it
