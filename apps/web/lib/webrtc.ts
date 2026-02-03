@@ -1,17 +1,11 @@
 import type { RTCSignalData } from '@rithy-room/shared';
 import type { TypedSocket } from './socket';
 
+// Keep ICE servers to max 4 to avoid "Using five or more STUN/TURN servers" warning
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  { urls: 'stun:stun3.l.google.com:19302' },
-  // OpenRelay TURN servers (free, community-provided)
-  {
-    urls: 'turn:openrelay.metered.ca:80',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
+  // OpenRelay TURN server for NAT traversal
   {
     urls: 'turn:openrelay.metered.ca:443',
     username: 'openrelayproject',
@@ -225,41 +219,58 @@ export class WebRTCManager {
   }): Promise<void> {
     const { from, signal } = data;
 
-    if (signal.type === 'offer') {
-      // Someone is calling us
-      let pc = this.peerConnections.get(from);
-      if (!pc) {
-        pc = this.createPeerConnection(from);
-      }
+    try {
+      if (signal.type === 'offer') {
+        // Someone is calling us or renegotiating
+        let pc = this.peerConnections.get(from);
+        if (!pc) {
+          pc = this.createPeerConnection(from);
+        }
 
-      await pc.setRemoteDescription({
-        type: 'offer',
-        sdp: signal.sdp,
-      });
+        // Handle glare: if we're also in the middle of sending an offer
+        // The peer with the "lower" ID should rollback (simple tiebreaker)
+        if (pc.signalingState === 'have-local-offer') {
+          // Glare detected - rollback our offer and accept theirs
+          console.log('Glare detected, rolling back local offer');
+          await pc.setLocalDescription({ type: 'rollback' });
+        }
 
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      this.socket.emit('webrtc-signal', {
-        to: from,
-        signal: {
-          type: 'answer',
-          sdp: answer.sdp,
-        },
-      });
-    } else if (signal.type === 'answer') {
-      const pc = this.peerConnections.get(from);
-      if (pc) {
         await pc.setRemoteDescription({
-          type: 'answer',
+          type: 'offer',
           sdp: signal.sdp,
         });
+
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        this.socket.emit('webrtc-signal', {
+          to: from,
+          signal: {
+            type: 'answer',
+            sdp: answer.sdp,
+          },
+        });
+      } else if (signal.type === 'answer') {
+        const pc = this.peerConnections.get(from);
+        if (pc) {
+          // Only set remote answer if we're expecting one
+          if (pc.signalingState === 'have-local-offer') {
+            await pc.setRemoteDescription({
+              type: 'answer',
+              sdp: signal.sdp,
+            });
+          } else {
+            console.log('Ignoring answer, not in have-local-offer state:', pc.signalingState);
+          }
+        }
+      } else if (signal.type === 'candidate' && signal.candidate) {
+        const pc = this.peerConnections.get(from);
+        if (pc && pc.remoteDescription) {
+          await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        }
       }
-    } else if (signal.type === 'candidate' && signal.candidate) {
-      const pc = this.peerConnections.get(from);
-      if (pc) {
-        await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
-      }
+    } catch (error) {
+      console.error('Error handling signal:', error);
     }
   }
 
