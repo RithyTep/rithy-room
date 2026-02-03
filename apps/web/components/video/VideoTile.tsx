@@ -63,9 +63,9 @@ export function VideoTile({
             : 'border border-[#242426]'
       )}
     >
-      {/* Hidden audio element for remote streams - ensures audio plays even when video is hidden */}
-      {stream && !isSelf && !hasVideo && (
-        <audio ref={audioRef} autoPlay playsInline />
+      {/* Hidden audio element for remote streams - always render to ensure audio plays */}
+      {stream && !isSelf && (
+        <audio ref={audioRef} autoPlay playsInline className="hidden" />
       )}
 
       {stream && hasVideo ? (

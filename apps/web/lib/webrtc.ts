@@ -4,6 +4,19 @@ import type { TypedSocket } from './socket';
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  // OpenRelay TURN servers (free, community-provided)
+  {
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
 ];
 
 export class WebRTCManager {
@@ -94,6 +107,12 @@ export class WebRTCManager {
 
   // Renegotiate connection after adding/removing tracks
   private async renegotiate(memberId: string, pc: RTCPeerConnection): Promise<void> {
+    // Only renegotiate if connection is in stable state to avoid glare
+    if (pc.signalingState !== 'stable') {
+      console.log('Skipping renegotiation, signaling state:', pc.signalingState);
+      return;
+    }
+
     try {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
