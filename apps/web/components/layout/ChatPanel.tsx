@@ -59,32 +59,19 @@ export function ChatPanel({ roomSlug, onToggleUsers, isMobile }: ChatPanelProps)
   };
 
   return (
-    <main className="flex-1 glass-panel rounded-none md:rounded-2xl flex flex-col relative overflow-hidden">
-      {/* Mobile Header */}
-      {isMobile && (
-        <div className="md:hidden h-14 border-b border-white/5 flex items-center justify-between px-4 bg-black/20 backdrop-blur-md sticky top-0 z-30">
-          <button className="text-slate-400">
-            <Icon icon="solar:hamburger-menu-linear" width={24} />
-          </button>
-          <span className="font-medium text-white">#{roomSlug}</span>
-          <button className="text-slate-400" onClick={onToggleUsers}>
-            <Icon icon="solar:users-group-rounded-linear" width={24} />
-          </button>
-        </div>
-      )}
-
+    <main className={`flex-1 glass-panel flex flex-col relative overflow-hidden ${isMobile ? 'rounded-none' : 'rounded-2xl'}`}>
       {/* Desktop Header */}
-      <header className="hidden md:flex h-16 border-b border-white/5 items-center justify-between px-6 bg-white/[0.01]">
-        <div className="flex items-center gap-3">
-          <div className="text-slate-500">
-            <Icon icon="solar:hashtag-linear" width={18} />
+      {!isMobile && (
+        <header className="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-white/[0.01]">
+          <div className="flex items-center gap-3">
+            <div className="text-slate-500">
+              <Icon icon="solar:hashtag-linear" width={18} />
+            </div>
+            <div className="flex flex-col">
+              <h2 className="text-sm font-medium text-white tracking-tight">{roomSlug}</h2>
+              <span className="text-[10px] text-slate-500">Chat & voice room</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <h2 className="text-sm font-medium text-white tracking-tight">{roomSlug}</h2>
-            <span className="text-[10px] text-slate-500">Chat & voice room</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 text-slate-400">
           {/* Member avatars */}
           {onlineMembers.length > 0 && (
             <div className="flex -space-x-2">
@@ -98,21 +85,14 @@ export function ChatPanel({ roomSlug, onToggleUsers, isMobile }: ChatPanelProps)
                   key={member.id}
                   src={member.avatarUrl || generateAvatarUrl(member.name)}
                   alt={member.name}
-                  className="w-6 h-6 rounded-full border border-black/50 grayscale opacity-60"
+                  className="w-6 h-6 rounded-full border border-black/50"
                   style={{ zIndex: 3 - i }}
                 />
               ))}
             </div>
           )}
-          <div className="h-4 w-px bg-white/10" />
-          <button className="hover:text-white transition-colors">
-            <Icon icon="solar:magnifer-linear" width={18} />
-          </button>
-          <button className="hover:text-white transition-colors">
-            <Icon icon="solar:pin-linear" width={18} />
-          </button>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* YouTube Player */}
       {musicState?.url && (

@@ -119,11 +119,11 @@ export default function RoomPage({ params }: RoomPageProps) {
         onLeaveRoom={handleLeaveRoom}
       />
 
-      <div className="h-screen w-full overflow-hidden">
+      <div className="h-screen w-full overflow-hidden flex flex-col">
         {/* Mobile Header */}
-        <div className="md:hidden h-14 border-b border-white/5 flex items-center justify-between px-4 bg-black/20 backdrop-blur-md sticky top-0 z-30">
-          <button className="text-slate-400">
-            <Icon icon="solar:hamburger-menu-linear" width={24} />
+        <div className="md:hidden h-14 border-b border-white/5 flex items-center justify-between px-4 bg-black/20 backdrop-blur-md shrink-0 z-30">
+          <button onClick={() => setShowSettings(true)} className="text-slate-400">
+            <Icon icon="solar:settings-linear" width={24} />
           </button>
           <span className="font-medium text-white">#{slug}</span>
           <button className="text-slate-400" onClick={() => setShowUserPanel(true)}>
@@ -131,36 +131,46 @@ export default function RoomPage({ params }: RoomPageProps) {
           </button>
         </div>
 
-        {/* Desktop Layout */}
-        <div className="h-full w-full max-w-[1600px] mx-auto p-0 md:p-6 flex gap-5">
-          {/* Nav Rail */}
-          <NavRail
-            activeItem="chat"
-            userAvatarUrl={currentMember?.avatarUrl || generateAvatarUrl(currentMember?.name || '')}
-            userName={currentMember?.name}
-            onUserClick={() => setShowSettings(true)}
-          />
+        {/* Main Content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Desktop Layout */}
+          <div className="hidden md:flex h-full w-full max-w-[1600px] mx-auto p-6 gap-5">
+            {/* Nav Rail */}
+            <NavRail
+              userAvatarUrl={currentMember?.avatarUrl || generateAvatarUrl(currentMember?.name || '')}
+              userName={currentMember?.name}
+              onUserClick={() => setShowSettings(true)}
+            />
 
-          {/* Chat Panel */}
-          <ChatPanel
-            roomSlug={slug}
-            onToggleUsers={() => setShowUserPanel(true)}
-            isMobile={false}
-          />
+            {/* Chat Panel */}
+            <ChatPanel
+              roomSlug={slug}
+              onToggleUsers={() => setShowUserPanel(true)}
+            />
 
-          {/* Users Panel - Desktop */}
-          <UsersPanel />
+            {/* Users Panel - Desktop */}
+            <UsersPanel />
+          </div>
 
-          {/* Users Panel - Mobile */}
-          <UsersPanel
-            isMobile
-            isOpen={showUserPanel}
-            onClose={() => setShowUserPanel(false)}
-          />
+          {/* Mobile Chat */}
+          <div className="md:hidden flex-1 flex flex-col overflow-hidden pb-14">
+            <ChatPanel
+              roomSlug={slug}
+              onToggleUsers={() => setShowUserPanel(true)}
+              isMobile
+            />
+          </div>
         </div>
 
+        {/* Users Panel - Mobile Overlay */}
+        <UsersPanel
+          isMobile
+          isOpen={showUserPanel}
+          onClose={() => setShowUserPanel(false)}
+        />
+
         {/* Mobile Bottom Nav */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-black/40 backdrop-blur-md border-t border-white/5 flex items-center justify-around px-6 safe-area-bottom">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-black/40 backdrop-blur-md border-t border-white/5 flex items-center justify-around px-6 safe-area-bottom z-20">
           <button className="flex flex-col items-center gap-1 text-[var(--accent)]">
             <Icon icon="solar:chat-round-line-linear" width={22} />
             <span className="text-[10px]">Chat</span>

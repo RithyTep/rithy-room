@@ -282,7 +282,7 @@ export function MessageBubble({
       </div>
 
       {/* Hover Actions */}
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-start pt-1">
+      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-start pt-1 relative">
         <div className="bg-[#1a1c23] border border-white/10 rounded-lg flex p-1 shadow-xl">
           <button
             onClick={() => setShowReactionPicker(!showReactionPicker)}
@@ -301,28 +301,28 @@ export function MessageBubble({
             </button>
           )}
         </div>
-      </div>
 
-      {/* Quick reaction picker */}
-      {showReactionPicker && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setShowReactionPicker(false)} />
-          <div className="absolute top-full mt-1 right-0 z-50 bg-[#161618] border border-white/10 rounded-full px-2 py-1 shadow-xl flex flex-row flex-nowrap gap-1">
-            {QUICK_EMOJIS.map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => {
-                  onReact(message.id, emoji);
-                  setShowReactionPicker(false);
-                }}
-                className="w-7 h-7 flex items-center justify-center text-sm hover:bg-white/10 rounded-full transition-colors shrink-0"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+        {/* Quick reaction picker */}
+        {showReactionPicker && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowReactionPicker(false)} />
+            <div className="absolute top-full right-0 mt-1 z-50 bg-[#161618] border border-white/10 rounded-full px-2 py-1 shadow-xl flex flex-row flex-nowrap gap-1">
+              {QUICK_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => {
+                    onReact(message.id, emoji);
+                    setShowReactionPicker(false);
+                  }}
+                  className="w-7 h-7 flex items-center justify-center text-sm hover:bg-white/10 rounded-full transition-colors shrink-0"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
