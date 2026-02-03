@@ -11,6 +11,7 @@ interface MediaState {
   isScreenSharing: boolean;
   volume: number;
   callParticipants: string[];
+  participantsToCall: string[]; // Participants we should initiate calls to
 
   // Actions
   setLocalStream: (stream: MediaStream | null) => void;
@@ -24,7 +25,9 @@ interface MediaState {
   setScreenSharing: (sharing: boolean) => void;
   setVolume: (volume: number) => void;
   addCallParticipant: (memberId: string) => void;
+  addParticipantToCall: (memberId: string) => void; // Add to both display and call queue
   removeCallParticipant: (memberId: string) => void;
+  clearParticipantsToCall: () => void;
   reset: () => void;
 }
 
@@ -39,6 +42,7 @@ export const useMediaStore = create<MediaState>((set, get) => ({
   isScreenSharing: false,
   volume: 100,
   callParticipants: [],
+  participantsToCall: [],
 
   setLocalStream: (stream) => set({ localStream: stream }),
 
@@ -102,10 +106,25 @@ export const useMediaStore = create<MediaState>((set, get) => ({
         : [...state.callParticipants, memberId],
     })),
 
+  // Add to both display list AND call initiation queue (for existing participants when we join)
+  addParticipantToCall: (memberId) =>
+    set((state) => ({
+      callParticipants: state.callParticipants.includes(memberId)
+        ? state.callParticipants
+        : [...state.callParticipants, memberId],
+      participantsToCall: state.participantsToCall.includes(memberId)
+        ? state.participantsToCall
+        : [...state.participantsToCall, memberId],
+    })),
+
   removeCallParticipant: (memberId) =>
     set((state) => ({
       callParticipants: state.callParticipants.filter((id) => id !== memberId),
+      participantsToCall: state.participantsToCall.filter((id) => id !== memberId),
     })),
+
+  clearParticipantsToCall: () =>
+    set({ participantsToCall: [] }),
 
   reset: () =>
     set({
@@ -119,5 +138,6 @@ export const useMediaStore = create<MediaState>((set, get) => ({
       isScreenSharing: false,
       volume: 100,
       callParticipants: [],
+      participantsToCall: [],
     }),
 }));

@@ -271,6 +271,7 @@ export function setupSocketHandlers(io: TypedServer) {
         .map((p) => p.memberId);
 
       // Send existing participants to the joining user
+      console.log(`[join-call] ${memberInfo.memberId} joining, existing participants:`, existingParticipants);
       if (existingParticipants.length > 0) {
         socket.emit('call-participants', { participants: existingParticipants });
       }

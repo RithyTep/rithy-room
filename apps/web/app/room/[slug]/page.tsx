@@ -168,7 +168,7 @@ export default function RoomPage({ params }: RoomPageProps) {
       </div>
 
       {/* Mobile Layout - show based on active tab */}
-      <div className="md:hidden flex-1 overflow-hidden pb-14">
+      <div className="md:hidden flex-1 flex flex-col min-h-0 pb-14">
         {mobileView === 'chat' && <MessageList isMobile />}
         {mobileView === 'members' && <MemberList isMobile />}
         {mobileView === 'call' && <VideoGrid isMobile />}

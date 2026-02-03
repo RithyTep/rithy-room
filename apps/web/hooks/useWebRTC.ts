@@ -19,7 +19,8 @@ export function useWebRTC(socket: TypedSocket) {
     setCameraOff,
     setScreenSharing,
     setVolume,
-    callParticipants,
+    participantsToCall,
+    clearParticipantsToCall,
     localStream,
     isScreenSharing,
     isCameraOff,
@@ -87,18 +88,24 @@ export function useWebRTC(socket: TypedSocket) {
     resetMedia();
   }, [setLocalStream, setScreenStream, setInCall, setScreenSharing, setCameraOff, resetMedia]);
 
-  // Connect to new participants
+  // Connect to participants we need to call (existing participants when we join)
   useEffect(() => {
     if (!managerRef.current || !localStream || !currentMemberId) return;
+    if (participantsToCall.length === 0) return;
 
     managerRef.current.setLocalStream(localStream);
 
-    callParticipants.forEach((memberId) => {
+    // Initiate calls to participants we need to call
+    participantsToCall.forEach((memberId) => {
       if (memberId !== currentMemberId && !managerRef.current!.getPeerConnection(memberId)) {
+        console.log('Initiating call to:', memberId);
         managerRef.current!.initiateCall(memberId);
       }
     });
-  }, [callParticipants, localStream, currentMemberId]);
+
+    // Clear the queue after initiating
+    clearParticipantsToCall();
+  }, [participantsToCall, localStream, currentMemberId, clearParticipantsToCall]);
 
   const toggleMute = useCallback(() => {
     const { isMuted } = useMediaStore.getState();

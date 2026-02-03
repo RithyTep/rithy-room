@@ -23,7 +23,7 @@ export function useSocket() {
     setJoining,
     setError,
   } = useRoomStore();
-  const { addCallParticipant, removeCallParticipant } = useMediaStore();
+  const { addCallParticipant, addParticipantToCall, removeCallParticipant } = useMediaStore();
 
   useEffect(() => {
     // Only initialize once
@@ -94,9 +94,9 @@ export function useSocket() {
     });
 
     socket.on('call-participants', ({ participants }) => {
-      // Add all existing participants when joining a call
+      // Add existing participants - we need to initiate calls to them
       participants.forEach((memberId) => {
-        addCallParticipant(memberId);
+        addParticipantToCall(memberId);
       });
     });
 
