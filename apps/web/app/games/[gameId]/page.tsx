@@ -50,8 +50,9 @@ export default function GamePage({ params }: GamePageProps) {
       <iframe
         src={game.url}
         className="flex-1 w-full border-0"
-        allow="fullscreen; autoplay; microphone; camera; gamepad"
-        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-pointer-lock"
+        allow="fullscreen; autoplay; microphone; camera; gamepad; accelerometer; gyroscope"
+        allowFullScreen
+        referrerPolicy="no-referrer-when-downgrade"
       />
     </div>
   );
