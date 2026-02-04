@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Icon } from '@iconify/react';
 import { GAMES_CATALOG, GAME_CATEGORIES, filterGames, type GameCategory } from '@/lib/games';
 
@@ -92,13 +93,13 @@ export default function GamesPage() {
                   className="glass-panel rounded-xl overflow-hidden group cursor-pointer text-left transition-all hover:border-[var(--accent)]/30 hover:shadow-[0_0_30px_rgba(110,168,255,0.1)]"
                 >
                   <div className="relative aspect-video bg-slate-800/50">
-                    <img
+                    <Image
                       src={game.thumbnail}
                       alt={game.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = `https://placehold.co/400x225/1e293b/64748b?text=${encodeURIComponent(game.name)}`;
-                      }}
+                      fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                      className="object-cover"
+                      loading="lazy"
                     />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                       <Icon

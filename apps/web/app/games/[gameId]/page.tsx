@@ -53,6 +53,7 @@ export default function GamePage({ params }: GamePageProps) {
         allow="fullscreen; autoplay; microphone; camera; gamepad; accelerometer; gyroscope"
         allowFullScreen
         referrerPolicy="no-referrer-when-downgrade"
+        scrolling="yes"
       />
     </div>
   );
