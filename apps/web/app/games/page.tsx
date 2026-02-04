@@ -2,9 +2,21 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Icon } from '@iconify/react';
 import { GAMES_CATALOG, GAME_CATEGORIES, filterGames, type GameCategory } from '@/lib/games';
+
+const CATEGORY_COLORS: Record<string, string> = {
+  nes: 'from-red-600 to-red-800',
+  snes: 'from-purple-600 to-purple-800',
+  n64: 'from-green-600 to-green-800',
+  gba: 'from-indigo-600 to-indigo-800',
+  ps1: 'from-blue-600 to-blue-800',
+  action: 'from-orange-600 to-orange-800',
+  racing: 'from-yellow-600 to-yellow-800',
+  io: 'from-cyan-600 to-cyan-800',
+  sports: 'from-emerald-600 to-emerald-800',
+  puzzle: 'from-pink-600 to-pink-800',
+};
 
 export default function GamesPage() {
   const [selectedCategory, setSelectedCategory] = useState<GameCategory>('all');
@@ -92,14 +104,10 @@ export default function GamesPage() {
                   href={`/games/${game.id}`}
                   className="glass-panel rounded-xl overflow-hidden group cursor-pointer text-left transition-all hover:border-[var(--accent)]/30 hover:shadow-[0_0_30px_rgba(110,168,255,0.1)]"
                 >
-                  <div className="relative aspect-video bg-slate-800/50">
-                    <Image
-                      src={game.thumbnail}
-                      alt={game.name}
-                      fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                      className="object-cover"
-                      loading="lazy"
+                  <div className={`relative aspect-video bg-gradient-to-br ${CATEGORY_COLORS[game.category] || 'from-slate-600 to-slate-800'} flex items-center justify-center`}>
+                    <Icon
+                      icon="solar:gamepad-bold"
+                      className="w-12 h-12 text-white/30"
                     />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                       <Icon
